@@ -50,7 +50,56 @@ def generate_report():
     })
 
 #WEBSOCKET EVENTS 
+"""Events will be for the bi-directional streaming and conversation between frontend and backend
+One Socket "stream_frame" will handle the information from frontend, call upon preprocessing functions
+and call our agents and models to feed on the data and generate structured reponses.
+"""
+@socketio.on('stream_frame')
+def handle_vision(data):
+    """handles the coming frames and information from the frontend, and feeds it to our models and agents"""
+    session_id=data.get('session_id')
+    frame_b64=data.get('image').split(",")[1]
+    settings= data.get('settings',{})
 
+    if session_id not in sessions:
+        return emit('error','Session not found, Please start a new session!')
+    session=sessions[session_id]
+    try: 
+        #Prepare the Multimodal Prompt
+        content = types.Content(
+            role="user",
+            parts=[
+                types.Part.from_bytes(
+                    data=base64.b64decode(frame_b64),
+                    mime_type="image/jpeg"
+                ),
+                types.Part(text="Analyze my current coding progress and logic.")
+            ]
+        )
+        #Gemini 3 configuration with Thinking Levels and Structures Outputs
+        config= types.GenerateContentConfig(
+            system_instruction=""" Prompt Template here(baadme daaldenge)
+            """,
+            thinking_config=types.ThinkingConfig(thinking_level="HIGH" if settings.get('deepdebug') 
+            else "LOW", include_thoughts=True),
+            response_mime_type="application/json",
+            response_schema=SocraticResponse #Class I'll define with Pydantic later
+        )
+        #Let's Call Gemini 3 with Thought Signature and our configurations
+        response= client.models.generate_content(
+            model="gemini-3-pro-preview",
+            contents=[content],
+            config=config
+        )
+        session.thought_signature = response.candidates[0].content.parts[0].thought_signature
+
+        #Send feedback to the frontend 
+        feedback=response.parsed
+        emit('mentor_feedback',feedback.model_dump())
+    except Exception as e:
+        print(f"Error processing the frame: {e}")
+        emit('error'{'msg':"AI Reasoning isn't available rn"})
+        
 
 if __name__ == '__main__':
     socketio.run(app,debug=True, port=5000)
