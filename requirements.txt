@@ -1,0 +1,9 @@
+
+Flask
+Flask-SocketIO
+eventlet
+google-genai
+pydantic
+opencv-python-headless
+Pillow  
+python-dotenv
