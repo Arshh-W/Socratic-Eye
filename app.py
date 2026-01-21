@@ -8,6 +8,9 @@ from pydantic import BaseModel, Field
 from google import genai 
 from google.genai import types
 
+#importing our custom made functions  (currently inpr kaam chl rha h)
+from vision_preprocessing import preprocess_frame
+
 #Set up and Flask Configuration
 app=Flask(__name__)#Flask object
 app.config['SECRET_KEY']='socratic_secret_2026'
@@ -71,6 +74,7 @@ def handle_vision(data):
     """handles the coming frames and information from the frontend, and feeds it to our models and agents"""
     session_id=data.get('session_id')
     frame_b64=data.get('image').split(",")[1]
+    frame_b64= preprocess_frame(frame_b64)
     settings= data.get('settings',{})
 
     if session_id not in sessions:
