@@ -18,6 +18,18 @@ client= genai.Client(api_key=os.enviorn.get("GEMINI_API_KEY"),
                     http_options=types.HttpOptions(api_version='v1alpha'))
 
 #Data Models( Ye Pydantic ka kaam h for structured outputs, we'll design classes)
+class SocraticResponse(BaseModel):
+    vibe:str = Field(description="The emotional tone: encouraging, critical, and also neutral.")
+    login_check:bool = Field(description="True if the code logic is working fine, False if a bug is detected.")
+    mentor_message:str= Field(description="Socratic question or hint for the developer.")
+    thought_process:str=Field(description="Internal AI reasoning about the logic(Not to be shown to the user keep it hidden from them.)")
+    target_lines:list[int]=Field(description="Lines of code being talked about or referenced.")
+
+class SessionStore:
+    """ In memory store for thought signatures and history for the database(Redis and Postgresql)"""
+    def __init__(self):
+        self.thought_signature=None
+        self.history=[]
 
 #REST Routes(Static routes are mainly POST(Request+response Payload) and GET(only Response Payload))
 """ We'll keep one Post Route for Session auth and id generation, along with session id, we'll also
@@ -31,7 +43,7 @@ def start_session():
     """It will start our AI, uska function mai baadme daaldunga, basic structure is gonna be this, and probably 
     we'll also add login/singups so wo bhi handle krlenge isme hi"""
     session_id= request.json.get('session_id','anonymous')
-    sessions[session_id]= #I'll make a class function which will store the details in the backend later.
+    sessions[session_id]= SessionStore() #Class for handling session history and signature object.
     return jsonify({
         "status":"Online",
         "session_id":session_id
@@ -83,7 +95,7 @@ def handle_vision(data):
             thinking_config=types.ThinkingConfig(thinking_level="HIGH" if settings.get('deepdebug') 
             else "LOW", include_thoughts=True),
             response_mime_type="application/json",
-            response_schema=SocraticResponse #Class I'll define with Pydantic later
+            response_schema=SocraticResponse #our Pydantic class for response structure
         )
         #Let's Call Gemini 3 with Thought Signature and our configurations
         response= client.models.generate_content(
