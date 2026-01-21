@@ -14,13 +14,13 @@ app.config['SECRET_KEY']='socratic_secret_2026'
 socketio= SocketIO(app, cors_allowed_origins= "*") #socketio FLask object
 
 #Gemini Client set up
-client= genai.Client(api_key=os.enviorn.get("GEMINI_API_KEY"),
+client= genai.Client(api_key=os.environ.get("GEMINI_API_KEY"),
                     http_options=types.HttpOptions(api_version='v1alpha'))
 
 #Data Models( Ye Pydantic ka kaam h for structured outputs, we'll design classes)
 class SocraticResponse(BaseModel):
     vibe:str = Field(description="The emotional tone: encouraging, critical, and also neutral.")
-    login_check:bool = Field(description="True if the code logic is working fine, False if a bug is detected.")
+    logic_check:bool = Field(description="True if the code logic is working fine, False if a bug is detected.")
     mentor_message:str= Field(description="Socratic question or hint for the developer.")
     thought_process:str=Field(description="Internal AI reasoning about the logic(Not to be shown to the user keep it hidden from them.)")
     target_lines:list[int]=Field(description="Lines of code being talked about or referenced.")
@@ -110,8 +110,12 @@ def handle_vision(data):
         emit('mentor_feedback',feedback.model_dump())
     except Exception as e:
         print(f"Error processing the frame: {e}")
-        emit('error'{'msg':"AI Reasoning isn't available rn"})
+        emit('error',{'msg':"AI Reasoning isn't available rn"})
         
 
 if __name__ == '__main__':
     socketio.run(app,debug=True, port=5000)
+
+#Next up: I'll do the login/signup and database set up
+#Sneha will make the OpenCV function for frame preprocessing and report generation function.
+#Then We'll move onto the agent building for interpreter/compiler logics and work on the prompt engineering part
