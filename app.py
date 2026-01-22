@@ -7,9 +7,12 @@ from flask_socketio import SocketIO, emit
 from pydantic import BaseModel, Field
 from google import genai 
 from google.genai import types
+from werkzeug.security import generate_password_hash, check_password_hash
 
 #importing our custom made functions  (currently inpr kaam chl rha h)
 from vision_preprocessing import preprocess_frame
+from db_manager import add_log_entry
+
 
 #Set up and Flask Configuration
 app=Flask(__name__)#Flask object
@@ -19,6 +22,17 @@ socketio= SocketIO(app, cors_allowed_origins= "*") #socketio FLask object
 #Gemini Client set up
 client= genai.Client(api_key=os.environ.get("GEMINI_API_KEY"),
                     http_options=types.HttpOptions(api_version='v1alpha'))
+
+
+
+# Database  configuration abhi final setup nhi h I'll do it tomorrow 
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', '')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app)
+#creating tables. if they dont exist( first time on local and cloud tabh hoga ye.. will test this tomorrow)
+with app.app_context():
+    db.create_all()
 
 #Data Models( Ye Pydantic ka kaam h for structured outputs, we'll design classes)
 class SocraticResponse(BaseModel):
@@ -108,7 +122,12 @@ def handle_vision(data):
             config=config
         )
         session.thought_signature = response.candidates[0].content.parts[0].thought_signature
-
+        #send it to database 
+        add_log_entry(
+            session_id=session_id, 
+            message=feedback.mentor_message, 
+            signature=session.thought_signature
+            )           
         #Send feedback to the frontend 
         feedback=response.parsed
         emit('mentor_feedback',feedback.model_dump())
@@ -123,3 +142,15 @@ if __name__ == '__main__':
 #Next up: I'll do the login/signup and database set up
 #Sneha will make the OpenCV function for frame preprocessing and report generation function.
 #Then We'll move onto the agent building for interpreter/compiler logics and work on the prompt engineering part
+
+"""
+#Note for Sneha
+22-jan Arsh: I've did the basic set up for a postgresql. I'll connect it later and make routes for singup/login probably tomorrow afternoon.
+do not touch anything regarding app,py and database files without asking me! please lol
+I've updates requirements.txt with the libraries I am used rn, pip install -r it! 
+
+#Note for myself 
+Do the postgresql final setup tomorrow and test on local.
+Set up the routes for /signup and /login
+Then Proceed with plans for the compiler agent and prompt engineering! 
+"""

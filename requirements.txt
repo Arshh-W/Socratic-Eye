@@ -6,3 +6,6 @@ pydantic
 opencv-python-headless
 Pillow  
 python-dotenv
+flask-sqlalchemy 
+psycopg2-binary
+werkzeug.security 
