@@ -162,10 +162,22 @@ def _extract_code_text_via_api(jpeg_bytes: bytes) -> str:
         return ""
 
 
-def preprocess_frame():
+def preprocess_frame(base64_frame: str) -> bytes:
+    # Step 1: Decode base64 to OpenCV image
+    image = _decode_base64_to_image(base64_frame)
 
+    # Step 2: Resize image
+    image = _resize(image, TARGET_HEIGHT)
 
+    # Step 3: Improve contrast
+    image = _apply_clahe(image)
 
+    # Step 4: Sharpen for text clarity
+    image = _sharpen_for_text(image)
 
-    return #bytes format
+    # Step 5: Encode to JPEG bytes
+    jpeg_bytes = _encode_jpeg(image, JPEG_QUALITY)
+
+    return jpeg_bytes
+
  
