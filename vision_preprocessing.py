@@ -161,19 +161,11 @@ def _extract_code_text_via_api(jpeg_bytes: bytes) -> str:
         logger.exception("OCR API request failed")
         return ""
 
-# Step 6: Normalize Code;;; string
 
-def _normalize_code_text(text: str) -> str:
-    if not text:
-        return ""
+def preprocess_frame():
 
-    return (
-        text.replace("\t", "    ")
-            .replace("\r\n", "\n")
-            .replace("ﬁ", "fi")
-            .replace("ﬂ", "fl")
-            .strip()
-    )
 
- 
+
+
+    return #bytes format
  
