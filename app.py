@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from google import genai 
 from google.genai import types
 from werkzeug.security import generate_password_hash, check_password_hash
-
+from dotenv import load_dotenv
 #importing our custom made functions  (currently inpr kaam chl rha h)
 from database_models import db, User, Session, SessionLog
 from vision_preprocessing import preprocess_frame
@@ -16,7 +16,7 @@ from reports import report_generation
 from db_manager import add_log_entry
 from interpreter import get_interpreter_brief
 
-
+load_dotenv()
 #Set up and Flask Configuration
 app=Flask(__name__)#Flask object
 app.config['SECRET_KEY']='socratic_secret_2026'

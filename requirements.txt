@@ -8,3 +8,4 @@ Pillow
 python-dotenv
 flask-sqlalchemy 
 psycopg2-binary
+dotenv 
