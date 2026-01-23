@@ -5,14 +5,14 @@
     USe a simpler gemini api call, which is fast and low cost, return the response.text
     """
 
-
+import os
 from typing import List# imports list type hint
 from sqlalchemy.orm import Session#
 import google.generativeai as genai
 
 # GEMINI CONFIGURATION
 
-GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"# store api ya os.environ['gemini apikey]
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 GEMINI_MODEL = "models/gemini-3-flash"
 
 genai.configure(api_key=GEMINI_API_KEY)#registeres api key globally
@@ -118,3 +118,8 @@ def generate_report_for_session(db: Session, session_id: str) -> str:
     report = generate_learning_report(prompt)
 
     return report
+
+def report_generation():
+
+
+    return #a string

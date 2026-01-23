@@ -11,6 +11,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 #importing our custom made functions  (currently inpr kaam chl rha h)
 from vision_preprocessing import preprocess_frame
+from reports.py import report_generation
 from db_manager import add_log_entry
 
 
@@ -86,10 +87,26 @@ def start_session():
     """It will start our AI, uska function mai baadme daaldunga, basic structure is gonna be this, and probably 
     we'll also add login/singups so wo bhi handle krlenge isme hi"""
     user_id= request.json.get('user_id')
-    sessions[session_id]= SessionStore() #Class for handling session history and signature object.
+    session_id=request.json.get('session_id','asession_id')#handle the session id 
+
+    #user exists or not check
+    user=User.query.get(user_id)
+    if not user:
+        return jsonify({
+            "msg":"User Not Found!!!"
+        }),404
+    #save the new session to Postgresql
+    new_session= Session(id=session_id,user_id=user_id)
+    db.session.add(new_session)
+    db.session.commit()
+    #Initialize memory store for the real time session track
+    sessions[session_id]=SessionStore()
+
+    #Class for handling session history and signature object.
     return jsonify({
         "status":"Online",
-        "session_id":session_id
+        "session_id":session_id,
+        "message": f"Welcome Back, {user.username}! Let's learn some cool stuff!"
     })
 @app.route('/report',methods=['GET'])
 def generate_report():
