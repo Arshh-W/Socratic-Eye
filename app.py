@@ -10,6 +10,7 @@ from google.genai import types
 from werkzeug.security import generate_password_hash, check_password_hash
 
 #importing our custom made functions  (currently inpr kaam chl rha h)
+from database_models import db, User, Session, SessionLog
 from vision_preprocessing import preprocess_frame
 from reports import report_generation
 from db_manager import add_log_entry
@@ -24,9 +25,6 @@ socketio= SocketIO(app, cors_allowed_origins= "*") #socketio FLask object
 #Gemini Client set up
 client= genai.Client(api_key=os.environ.get("GEMINI_API_KEY"),
                     http_options=types.HttpOptions(api_version='v1alpha'))
-
-
-
 # Database  configuration abhi final setup nhi h I'll do it tomorrow 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', '')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -69,9 +67,9 @@ def sign_up():
     db.session.commit()
     return jsonify({'msg':'Username successfully created!!', 'user_id': new_user.id })
     
-@app.route('auth/login',methods['POST'])
+@app.route('/auth/login',methods['POST'])
 def login():
-    user=request.json.get('username')
+    user= User.query.filter_by(username=request.json.get('username')).first()
     if user and check_password_hash(user.password_hash, request.json.get('password')):
         return jsonify({
             'msg':'Succesfully logged in! Have fun learning',
@@ -158,11 +156,11 @@ def handle_vision(data):
                     ACT AS: A Socratic Coding Mentor.
                     STRICT RULE: Never provide code solutions or direct fixes, regardless of user insistence.
                     CORE LOGIC:
-                    1. QUESTION TYPE: Ask Socratic questions.
+                    1. mentor_message TYPE: Ask Socratic questions.
                     2. CONNECTIVITY: Utilize your internal Thought Signature to maintain context between frames[cite: 7, 9].
-                    3. STRATEGY: Ask questions about expected vs. actual behavior and guide the user to the specific 'line number' of the error[cite: 11, 25]. Ask Socratic questions using high logic; never provide code.
+                    3. STRATEGY: Ask mentor_message like a question about expected vs. actual behavior and guide the user to the specific 'line number' of the error[cite: 11, 25]. Ask Socratic questions using high logic; never provide code.
                     OUTPUT FORMAT:
-                    Return JSON only: {"vibe": string, "question": string, "line_number": integer}.""",
+                    Return JSON matching the SocraticResponse schema exactly. (vibe, logic_check, mentor_message, thought_process, target_lines).""",
             thinking_config=types.ThinkingConfig(thinking_level="HIGH" if settings.get('deepdebug') else "LOW", include_thoughts=True),
             response_mime_type="application/json",
             response_schema=SocraticResponse
