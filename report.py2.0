@@ -1,4 +1,3 @@
-
 """
     Queries the database for all 'mentor_messages' in a session 
     and asks Gemini to summarize the user's learning progress.
@@ -110,3 +109,4 @@ def generate_report_for_session(db: Session, session_id: str) -> str:
 
 def_report_generation(db: Session, session_id: str) -> str:
 return generate_report_for_session(db, session_id)
+
