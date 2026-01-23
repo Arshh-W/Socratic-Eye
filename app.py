@@ -55,11 +55,37 @@ class SessionStore:
 As for the GET Route, We'll send a report about the entire session to the user so that they know 
 what all they learned, and save it in the database whenever the user hits end session."""
 sessions={} #temporary storage baadme isse database se connect krdenge
+@app.route('/auth/singup',methods=['POST'])
+def sign_up():
+    username=request.json.get('username')
+    password=request.json.get('password')
+    if User.query.filter_by(username=username).first():
+        return jsonify({'msg':'User already exists, try another name!'}),400
+    new_user= User(username=username,
+    password_hash=generate_password_hash(password))
+    db.session.add(new_user)
+    db.commit()
+    return jsonify({'msg':'Username successfully created!!', 'user_id': new_user.id })
+    
+@app.route('auth/login',methods['POST'])
+def login():
+    user=request.json.get('username')
+    if user and check_password_hash(request.json.get('password')):
+        return jsonify({
+            'msg':'Succesfully logged in! Have fun learning',
+            'user_Id':user.id,
+            'username':user.username
+        })
+    else: 
+        return jsonify({
+            'msg':"Invalid Credentials, Kindly try again or singup if you're new"
+        }),400
+
 @app.route('/auth/session',methods=['POST'])
 def start_session():
     """It will start our AI, uska function mai baadme daaldunga, basic structure is gonna be this, and probably 
     we'll also add login/singups so wo bhi handle krlenge isme hi"""
-    session_id= request.json.get('session_id','anonymous')
+    user_id= request.json.get('user_id')
     sessions[session_id]= SessionStore() #Class for handling session history and signature object.
     return jsonify({
         "status":"Online",
@@ -75,7 +101,6 @@ def generate_report():
     return jsonify({
         "report": report_string,
         "message": " We're signing off, Hope to see you soon"
-
     })
 
 #WEBSOCKET EVENTS 
