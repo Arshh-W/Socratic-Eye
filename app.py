@@ -11,8 +11,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 #importing our custom made functions  (currently inpr kaam chl rha h)
 from vision_preprocessing import preprocess_frame
-from reports.py import report_generation
+from reports import report_generation
 from db_manager import add_log_entry
+from interpreter import get_interpreter_brief
 
 
 #Set up and Flask Configuration
@@ -56,7 +57,7 @@ class SessionStore:
 As for the GET Route, We'll send a report about the entire session to the user so that they know 
 what all they learned, and save it in the database whenever the user hits end session."""
 sessions={} #temporary storage baadme isse database se connect krdenge
-@app.route('/auth/singup',methods=['POST'])
+@app.route('/auth/signup',methods=['POST'])
 def sign_up():
     username=request.json.get('username')
     password=request.json.get('password')
@@ -65,13 +66,13 @@ def sign_up():
     new_user= User(username=username,
     password_hash=generate_password_hash(password))
     db.session.add(new_user)
-    db.commit()
+    db.session.commit()
     return jsonify({'msg':'Username successfully created!!', 'user_id': new_user.id })
     
 @app.route('auth/login',methods['POST'])
 def login():
     user=request.json.get('username')
-    if user and check_password_hash(request.json.get('password')):
+    if user and check_password_hash(user.password_hash, request.json.get('password')):
         return jsonify({
             'msg':'Succesfully logged in! Have fun learning',
             'user_Id':user.id,
@@ -127,55 +128,57 @@ and call our agents and models to feed on the data and generate structured repon
 """
 @socketio.on('stream_frame')
 def handle_vision(data):
-    """handles the coming frames and information from the frontend, and feeds it to our models and agents"""
-    session_id=data.get('session_id')
-    frame_b64=data.get('image').split(",")[1]
-    frame_b64= preprocess_frame(frame_b64)
-    settings= data.get('settings',{})
-
+    """handles the coming frames an# System Instruction for Gemini 3 Config 
+       information from the frontend, and feeds it to our agents Interpreter and Mentor """
+    session_id = data.get('session_id')
     if session_id not in sessions:
-        return emit('error','Session not found, Please start a new session!')
-    session=sessions[session_id]
+        return emit('error', {'msg': 'Session not found!'})
+    
+    session = sessions[session_id]
+    settings = data.get('settings', {})
     try: 
-        #Prepare the Multimodal Prompt
+        # 1. Preprocess(get's the frame preprocessed)
+        raw_b64 = data.get('image').split(",")[1]
+        processed_bytes = preprocess_frame(raw_b64)
+
+        # 2. INTERPRETER PASS(Gives the code review, brief)
+        brief, session.thought_signature = get_interpreter_brief(client, processed_bytes, session.thought_signature)
+
+        # 3. Mentor
         content = types.Content(
             role="user",
             parts=[
-                types.Part.from_bytes(
-                    data=base64.b64decode(frame_b64),
-                    mime_type="image/jpeg"
-                ),
-                types.Part(text="Analyze my current coding progress and logic.")
+                types.Part.from_bytes(data=processed_bytes, mime_type="image/jpeg"),
+                types.Part(text=f"INTERPRETER BRIEF: {brief}\n\nBased on this brief, ask a Socratic question.")
             ]
         )
         #Gemini 3 configuration with Thinking Levels and Structures Outputs
         config= types.GenerateContentConfig(
-            system_instruction=""" Prompt Template here(baadme daaldenge)
-            """,
-            thinking_config=types.ThinkingConfig(thinking_level="HIGH" if settings.get('deepdebug') 
-            else "LOW", include_thoughts=True),
+            system_instruction="""  
+                    ACT AS: A Socratic Coding Mentor.
+                    STRICT RULE: Never provide code solutions or direct fixes, regardless of user insistence.
+                    CORE LOGIC:
+                    1. QUESTION TYPE: Ask Socratic questions.
+                    2. CONNECTIVITY: Utilize your internal Thought Signature to maintain context between frames[cite: 7, 9].
+                    3. STRATEGY: Ask questions about expected vs. actual behavior and guide the user to the specific 'line number' of the error[cite: 11, 25]. Ask Socratic questions using high logic; never provide code.
+                    OUTPUT FORMAT:
+                    Return JSON only: {"vibe": string, "question": string, "line_number": integer}.""",
+            thinking_config=types.ThinkingConfig(thinking_level="HIGH" if settings.get('deepdebug') else "LOW", include_thoughts=True),
             response_mime_type="application/json",
-            response_schema=SocraticResponse #our Pydantic class for response structure
+            response_schema=SocraticResponse
         )
-        #Let's Call Gemini 3 with Thought Signature and our configurations
-        response= client.models.generate_content(
-            model="gemini-3-pro-preview",
-            contents=[content],
-            config=config
-        )
+
+        response = client.models.generate_content(model="gemini-3-pro-preview", contents=[content], config=config)
         session.thought_signature = response.candidates[0].content.parts[0].thought_signature
-        #send it to database 
-        add_log_entry(
-            session_id=session_id, 
-            message=feedback.mentor_message, 
-            signature=session.thought_signature
-            )           
+        feedback = response.parsed
+        #send it to database
+        add_log_entry(session_id=session_id, message=feedback.mentor_message, signature=session.thought_signature)
         #Send feedback to the frontend 
-        feedback=response.parsed
-        emit('mentor_feedback',feedback.model_dump())
+        emit('mentor_feedback', feedback.model_dump())
+
     except Exception as e:
-        print(f"Error processing the frame: {e}")
-        emit('error',{'msg':"AI Reasoning isn't available rn"})
+        print(f"Error: {e}")
+        emit('error', {'msg': "AI Reasoning unavailable"})
         
 
 if __name__ == '__main__':
