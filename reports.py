@@ -1,60 +1,43 @@
-
-"""
-    Queries the database for all 'mentor_messages' in a session 
-    and asks Gemini to summarize the user's learning progress.
-    USe a simpler gemini api call, which is fast and low cost, return the response.text
-    """
-
 import os
-from typing import List# imports list type hint
+from typing import List
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-import google.generativeai as genai
-
-# GEMINI CONFIGURATION
-
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-GEMINI_MODEL = "models/gemini-3-flash"
-
-genai.configure(api_key=GEMINI_API_KEY)#registeres api key globally
+# Correct Import for the modern SDK
+from google import genai
+from google.genai import types 
+from dotenv import load_dotenv
+#Gemini Configuration
+load_dotenv()
+client = genai.Client(
+    api_key=os.environ.get("GEMINI_API_KEY"),
+    # http_options is usually only needed for specific proxy/version overrides
+    http_options=types.HttpOptions(api_version='v1alpha') 
+)
+GEMINI_MODEL = "gemini-2.5-flash"
 
 # DATABASE QUERY
-
-
 def fetch_mentor_messages(db: Session, session_id: str) -> List[str]:
-    """
-    Fetch all mentor messages for a given session in chronological order.
-    """
-
-    query = """
+    # Wrap raw SQL in text()
+    query = text("""
         SELECT content
         FROM mentor_messages
         WHERE session_id = :session_id
           AND role = 'mentor'
         ORDER BY created_at ASC
-    """
+    """)
 
     result = db.execute(query, {"session_id": session_id}).fetchall()
-
-    # Convert rows -> list of strings, extracts msg from each row
     return [row[0] for row in result]
 
-# PROMPT BUILDER, msg into prompt
-
+# PROMPT BUILDER
 def build_learning_report_prompt(messages: List[str]) -> str:
-    """
-    Builds a structured prompt for Gemini to analyze learning progress.hum ab har mentor msg ko number karenge taki gemini progresssion and turining point ko detect kre
-    """
-
     chronological_messages = "\n".join(
         f"{i + 1}. {msg}" for i, msg in enumerate(messages)
     )
 
-    prompt = f"""
+    return f"""
 Review the mentor messages below in order.
-
 Determine learning progress based on message progression.
-
 Output ONLY in this format:
 
 Concepts Mastered:
@@ -68,46 +51,30 @@ Next-Step Recommendations:
 
 Mentor Messages:
 {chronological_messages}
-"""
-
-    return prompt.strip()
+""".strip()
 
 # GEMINI CALL
-
 def generate_learning_report(prompt: str) -> str:
     """
-    Sends the prompt to Gemini Flash and returns a plain string response.
+    Sends the prompt to Gemini Flash using the modern client.models.generate_content
     """
-
-    model = genai.GenerativeModel(GEMINI_MODEL)
-
-    response = model.generate_content(
-        prompt,
-        generation_config={
-            "temperature": 0.3,       # stable, analytical
-            "max_output_tokens": 600  # enough for full report
-        }
+    # Notice: No 'genai.GenerativeModel' instantiation needed here
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            temperature=0.3,
+            max_output_tokens=600
+        )
     )
 
     return response.text
 
-# MAIN ORCHESTRATOR,api call
-
-def generate_report_for_session(db: Session, session_id: str) -> str:
-    """
-    Full pipeline:
-    DB → Mentor Messages → Prompt → Gemini → Learning Report
-    """
-
+def report_generation(db: Session, session_id: str) -> str:
     mentor_messages = fetch_mentor_messages(db, session_id)
 
     if not mentor_messages:
         return "No mentor messages found for this session."
 
     prompt = build_learning_report_prompt(mentor_messages)
-    report = generate_learning_report(prompt)
-
-    return report
-
-def report_generation(db: Session, session_id: str) -> str:
-    return generate_report_for_session(db, session_id)
+    return generate_learning_report(prompt)

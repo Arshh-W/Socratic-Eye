@@ -67,7 +67,7 @@ def sign_up():
     db.session.commit()
     return jsonify({'msg':'Username successfully created!!', 'user_id': new_user.id })
     
-@app.route('/auth/login',methods['POST'])
+@app.route('/auth/login',methods=['POST'])
 def login():
     user= User.query.filter_by(username=request.json.get('username')).first()
     if user and check_password_hash(user.password_hash, request.json.get('password')):

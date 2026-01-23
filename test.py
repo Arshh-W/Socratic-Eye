@@ -51,3 +51,10 @@ def test_logic():
 
 if __name__ == "__main__":
     test_logic()
+
+
+"""
+Test 1 : 24th jan 2026. 
+Db is connected. Local FIrst time setup was a haul. 
+and as for the GEMINI API KEY, look for solutions to bypass the limit or restart your google cloud account. 
+"""
