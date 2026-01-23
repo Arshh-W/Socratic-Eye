@@ -196,4 +196,9 @@ I've updates requirements.txt with the libraries I am used rn, pip install -r it
 Do the postgresql final setup tomorrow and test on local.
 Set up the routes for /signup and /login
 Then Proceed with plans for the compiler agent and prompt engineering! 
+
+P/S Everything above is done!! Now. Testing will Start Tomorrow.
+24-jan 
+Arsh: Do the Sliding window management in sessionstore class, to ensure there is efficient memory manageemnt for context window
+ (Research if sliding window will help in this set up.)
 """

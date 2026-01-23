@@ -7,7 +7,8 @@
 
 import os
 from typing import List# imports list type hint
-from sqlalchemy.orm import Session#
+from sqlalchemy.orm import Session
+from sqlalchemy import text
 import google.generativeai as genai
 
 # GEMINI CONFIGURATION
@@ -108,5 +109,5 @@ def generate_report_for_session(db: Session, session_id: str) -> str:
 
     return report
 
-def_report_generation(db: Session, session_id: str) -> str:
-return generate_report_for_session(db, session_id)
+def report_generation(db: Session, session_id: str) -> str:
+    return generate_report_for_session(db, session_id)
