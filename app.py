@@ -224,4 +224,7 @@ P/S Everything above is done!! Now. Testing will Start Tomorrow.
 24-jan 
 Arsh: Do the Sliding window management in sessionstore class, to ensure there is efficient memory manageemnt for context window
  (Research if sliding window will help in this set up)
+
+As for the API key, we'll need the tier 1, v1alpha. for that I'll restart my billion account soon. 
+As for the test.py I've utilized the free tier v1beta hehe, but wo hmara kaam achche se nhi kr rha lol
 """
