@@ -1,0 +1,161 @@
+/* ================================
+   GLOBAL RESET & BASE
+================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  background: #0e0e14;
+  color: #ffffff;
+  overflow: hidden;
+}
+
+/* ================================
+   CSS VARIABLES (THEME SYSTEM)
+================================ */
+
+body {
+  --accent: #4cc9f0;          /* default accent */
+  --accent-soft: rgba(76, 201, 240, 0.35);
+  --danger: #ffb703;
+  --glass-bg: rgba(30, 30, 40, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --text-muted: rgba(255, 255, 255, 0.65);
+}
+
+/* Hype-Man Mode */
+body.hype-man {
+  --accent: gold;
+  --accent-soft: rgba(255, 215, 0, 0.4);
+}
+
+/* ================================
+   SCROLLBAR (SUBTLE)
+================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+}
+
+/* ================================
+   UTILITY CLASSES
+================================ */
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ================================
+   MENTOR MESSAGE (BASE OVERRIDES)
+================================ */
+
+.mentor-message {
+  border-left: 4px solid var(--accent);
+}
+
+.mentor-message.alert {
+  border-left-color: var(--danger);
+}
+
+/* ================================
+   SOCIATIC ORB ACCENT
+================================ */
+
+.socratic-orb.thinking {
+  box-shadow: 0 0 22px var(--accent-soft);
+}
+
+.socratic-orb.speaking {
+  box-shadow: 0 0 28px var(--accent-soft);
+}
+
+/* ================================
+   CODE OVERLAY ENHANCEMENTS
+================================ */
+
+.code-highlight {
+  background: rgba(255, 183, 3, 0.14);
+}
+
+/* ================================
+   FOCUS NUDGE GLOW
+================================ */
+
+.nudge-glow {
+  border-color: rgba(255, 183, 3, 0.45);
+}
+
+/* ================================
+   SETTINGS PANEL CONTROLS
+================================ */
+
+.settings-panel button {
+  background: var(--accent);
+}
+
+.settings-panel button:hover {
+  opacity: 0.9;
+}
+
+.settings-panel input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+/* ================================
+   ACCESSIBILITY
+================================ */
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* High contrast support */
+@media (prefers-contrast: more) {
+  body {
+    background: #000;
+    color: #fff;
+  }
+
+  .glass {
+    background: #111;
+    border-color: #fff;
+  }
+}

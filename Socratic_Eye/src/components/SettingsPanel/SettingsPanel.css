@@ -1,0 +1,38 @@
+.settings-panel {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  width: 220px;
+  padding: 14px;
+  background: rgba(30, 30, 40, 0.85);
+  backdrop-filter: blur(14px);
+  border-radius: 16px;
+  color: white;
+  z-index: 1000;
+}
+
+.settings-panel h4 {
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+.setting {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.setting button {
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  background: #4cc9f0;
+  color: black;
+}
+
+.setting input {
+  transform: scale(1.2);
+}
