@@ -26,7 +26,7 @@ socketio= SocketIO(app, cors_allowed_origins= "*") #socketio FLask object
 client= genai.Client(api_key=os.environ.get("GEMINI_API_KEY"),
                     http_options=types.HttpOptions(api_version='v1alpha'))
 # Database  configuration abhi final setup nhi h I'll do it tomorrow 
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', '')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:password@localhost:5432/socratic_eye')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -46,7 +46,19 @@ class SessionStore:
     """ In memory store for thought signatures and history for the database(Redis and Postgresql)"""
     def __init__(self):
         self.thought_signature=None
-        self.history=[]
+        self.history=[]#list of dictionaries h ye!!! I keep forgetting this lol
+        self.max_history = 10
+
+    def add_to_history(self, mentor_msg):
+        self.history.append(mentor_msg)
+        # Sliding window for the context window management,keep only the last N messages
+        if len(self.history) > self.max_history:
+            self.history.pop(0)
+    def get_context_string(self):
+        """Returns a formatted string of the convo history"""
+        if not self.history:
+            return "No previous conversation."
+        return f"\n {[f'- Previous question: {msg}' for msg in self.history]}"
 
 #REST Routes(Static routes are mainly POST(Request+response Payload) and GET(only Response Payload))
 """ We'll keep one Post Route for Session auth and id generation, along with session id, we'll also
@@ -112,7 +124,7 @@ def generate_report():
     """It will generate a session report based of the session memory from the current session
     and then later(I'll connect it to the database for storing the sessions for users to look back at)
     """
-    report_string= report_generation()#We'll create this function in another py script, and will import it later
+    report_string= report_generation(db.session, request.args.get('session_id'))#We'll create this function in another py script, and will import it later
     #later, I'll manage the database connectivty
     return jsonify({
         "report": report_string,
@@ -143,11 +155,20 @@ def handle_vision(data):
         brief, session.thought_signature = get_interpreter_brief(client, processed_bytes, session.thought_signature)
 
         # 3. Mentor
+        past_questions = session.get_context_string()
+
         content = types.Content(
             role="user",
             parts=[
                 types.Part.from_bytes(data=processed_bytes, mime_type="image/jpeg"),
-                types.Part(text=f"INTERPRETER BRIEF: {brief}\n\nBased on this brief, ask a Socratic question.")
+                types.Part(text=f"""
+                    TECHNICAL OBSERVER BRIEF: {brief}
+                    
+                    CONVERSATION HISTORY (Do not repeat these):
+                    {past_questions}
+                    
+                    Based on the brief and history, ask the NEXT Socratic question.
+                """)
             ]
         )
         #Gemini 3 configuration with Thinking Levels and Structures Outputs
@@ -166,9 +187,11 @@ def handle_vision(data):
             response_schema=SocraticResponse
         )
 
-        response = client.models.generate_content(model="gemini-3-pro-preview", contents=[content], config=config)
+        response = client.models.generate_content(model="gemini-3-flash-preview", contents=[content], config=config)
         session.thought_signature = response.candidates[0].content.parts[0].thought_signature
         feedback = response.parsed
+        #session history me add. 
+        session.add_to_history(feedback.mentor_message)
         #send it to database
         add_log_entry(session_id=session_id, message=feedback.mentor_message, signature=session.thought_signature)
         #Send feedback to the frontend 
