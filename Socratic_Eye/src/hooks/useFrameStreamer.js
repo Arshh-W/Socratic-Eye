@@ -1,20 +1,28 @@
+import html2canvas from "html2canvas";
 import { socket } from "../socket/mentorSocket";
 import { useSession } from "../context/SessionContext";
 
-export const sendFrame = (imageBase64, timestamp) => {
-  const {
-    sessionId,
-    thoughtSignatureRef,
-    thinkingLevel
-  } = useSession();
+export const useFrameStreamer = (ref) => {
+  const { sessionId, thinkingLevel } = useSession();
 
-  if (!sessionId) return;
+  const sendFrame = async () => {
+    if (!sessionId || !ref.current) return;
 
-  socket.emit("stream_frame", {
-    session_id: sessionId,
-    image_data: imageBase64,
-    timestamp,
-    thinking_level: thinkingLevel,
-    thought_signature: thoughtSignatureRef.current
-  });
+    const canvas = await html2canvas(ref.current, {
+      scale: 0.5,
+      logging: false
+    });
+
+    const image = canvas.toDataURL("image/jpeg", 0.6);
+
+    socket.emit("stream_frame", {
+      session_id: sessionId,
+      image,
+      settings: {
+        deepdebug: thinkingLevel === "high"
+      }
+    });
+  };
+
+  return sendFrame;
 };

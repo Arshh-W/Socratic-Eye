@@ -7,8 +7,7 @@ export const useMentorSocket = () => {
     sessionId,
     setMentorMessage,
     setVibe,
-    setHighlightLines,
-    thoughtSignatureRef
+    setHighlightLines
   } = useSession();
 
   useEffect(() => {
@@ -17,11 +16,14 @@ export const useMentorSocket = () => {
     socket.connect();
 
     socket.on("mentor_feedback", (data) => {
-      setVibe("speaking");
-      setMentorMessage(data.message);
+      // Map backend → UI
+      setVibe(data.vibe || "neutral");
+      setMentorMessage(data.mentor_message);
+      setHighlightLines(data.target_lines || []);
+    });
 
-      setHighlightLines(data.highlight_lines || []);
-      thoughtSignatureRef.current = data.thought_signature;
+    socket.on("error", (err) => {
+      console.error("Socket error:", err);
     });
 
     return () => {
