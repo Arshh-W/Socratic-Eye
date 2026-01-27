@@ -12,6 +12,8 @@ export const SessionProvider = ({ children }) => {
   const [isDistracted, setIsDistracted] = useState(false);
   const [thinkingLevel, setThinkingLevel] = useState("high");
   const [hypeMan, setHypeMan] = useState(false);
+  const [readAloud, setReadAloud] = useState(false);
+
 
   const thoughtSignatureRef = useRef(null);
 
@@ -36,6 +38,8 @@ export const SessionProvider = ({ children }) => {
         setThinkingLevel,
         hypeMan,
         setHypeMan,
+        readAloud,
+        setReadAloud,
         thoughtSignatureRef
       }}
     >
