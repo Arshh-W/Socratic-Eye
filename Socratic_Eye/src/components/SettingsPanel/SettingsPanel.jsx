@@ -8,6 +8,7 @@ const SettingsPanel = () => {
     hypeMan,
     setHypeMan
   } = useSession();
+  
 
   return (
     <div className="settings-panel" role="dialog" aria-label="Socratic Eye Settings">

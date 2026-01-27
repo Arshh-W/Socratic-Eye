@@ -10,6 +10,10 @@ import CodeOverlay from "../components/CodeOverlay/CodeOverlay";
 import FocusMeter from "../components/FocusMeter/FocusMeter";
 import SettingsPanel from "../components/SettingsPanel/SettingsPanel";
 
+import { getReport } from "../api/reportApi";
+import { socket } from "../socket/mentorSocket";
+
+
 const MentorIDE = () => {
   const ideRef = useRef(null); // Ref for the container
   const videoRef = useRef(null); // Ref for the actual video stream
@@ -48,6 +52,19 @@ const MentorIDE = () => {
 
     init();
   }, [user]);
+
+  const endSession = async () => {
+  try {
+    const report = await getReport(sessionId);
+    alert(report.report); // Display the report in an alert(shi hai na??)
+
+    socket.disconnect();
+    window.location.href = "/login";
+  } catch (err) {
+    console.error(err);
+  }
+};
+
 
   // 🔹 2. Start Screen Share
   const startScreenShare = async () => {
@@ -136,6 +153,27 @@ const MentorIDE = () => {
       <FocusMeter />
       <SocraticOrb />
       <MentorMessage />
+
+      {/* 🔹 End Session Button */}
+      <button
+      onClick={endSession}
+      style={{
+      position: "absolute",
+      top: "20px",
+      right: "20px",
+      zIndex: 2000,
+      padding: "10px 16px",
+      background: "#f56565",
+      color: "white",
+      border: "none",
+      borderRadius: "8px",
+      fontWeight: "bold",
+      cursor: "pointer"
+    }}
+      >
+        ⏹ End Session
+      </button>
+
     </div>
   );
 };

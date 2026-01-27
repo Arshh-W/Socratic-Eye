@@ -4,18 +4,20 @@ import { SessionProvider, useSession } from "./context/SessionContext";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import MentorIDE from "./pages/MentorIDE";
+import SessionReport from "./pages/SessionReport";
 
 import "./styles/globals.css";
 
 const ProtectedRoute = ({ children }) => {
-  const { user } = useSession();
-  return user ? children : <Navigate to="/login" />;
+  const { sessionId } = useSession();
+  return sessionId ? children : <Navigate to="/login" />;
 };
 
 const AppRoutes = () => (
   <Routes>
     <Route path="/login" element={<Login />} />
     <Route path="/signup" element={<Signup />} />
+
     <Route
       path="/mentor"
       element={
@@ -24,6 +26,9 @@ const AppRoutes = () => (
         </ProtectedRoute>
       }
     />
+
+    <Route path="/report" element={<SessionReport />} />
+
     <Route path="*" element={<Navigate to="/login" />} />
   </Routes>
 );
