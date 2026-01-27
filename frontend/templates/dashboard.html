@@ -1,0 +1,50 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<div id="dashboardAuthCheck" class="d-none">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                 <h3 id="welcomeMsg">Ready to Code.</h3>
+                 <div>
+                     <button id="startSessionBtn" class="btn btn-cyan btn-lg me-2">Start Session & Share Screen</button>
+                     <button id="stopSessionBtn" class="btn btn-danger d-none">Stop Sharing</button>
+                 </div>
+            </div>
+
+            <div id="statusIndicator" class="badge bg-secondary mb-2">Status: Offline</div>
+
+            <div class="video-container bg-black border border-secondary rounded d-flex justify-content-center align-items-center" style="height: 500px; overflow:hidden;">
+                <p id="videoPlaceholder" class="text-muted">Screen preview will appear here</p>
+                <video id="screenPreview" autoplay playsinline muted class="d-none" style="max-width: 100%; max-height: 100%;"></video>
+            </div>
+            <canvas id="frameCanvas" class="d-none"></canvas>
+        </div>
+
+        <div class="col-md-4 d-flex flex-column" style="height: 600px;">
+             <h4 class="neon-text mb-3">Mentor Interface</h4>
+             
+             <div id="feedbackLog" class="flex-grow-1 bg-black border border-secondary rounded p-3 overflow-auto mb-3">
+                 <div class="text-muted fst-italic">Waiting for session start...</div>
+             </div>
+
+             <div class="card bg-dark border-secondary">
+                 <div class="card-body">
+                     <h6 class="text-cyan">Settings</h6>
+                     <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" role="switch" id="ttsToggle" checked>
+                        <label class="form-check-label" for="ttsToggle">Voice Read Aloud</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="deepDebugToggle">
+                        <label class="form-check-label" for="deepDebugToggle">Deep Debug Mode (Slower)</label>
+                    </div>
+                 </div>
+             </div>
+        </div>
+    </div>
+</div>
+<div id="loginRedirectMsg" class="text-center mt-5 d-none">
+    <h3>Authentication required. Redirecting...</h3>
+</div>
+{% endblock %}

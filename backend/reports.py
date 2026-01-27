@@ -18,7 +18,7 @@ GEMINI_MODEL = "gemini-2.5-flash"
 def fetch_mentor_messages(db: Session, session_id: str) -> List[str]:
     # Wrap raw SQL in text()
     query = text("""
-        SELECT message
+        SELECT mentor_message
         FROM session_logs 
         WHERE session_id = :session_id
         ORDER BY timestamp ASC
