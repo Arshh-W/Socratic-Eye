@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { SessionProvider, useSession } from "./context/SessionContext";
+import { SessionProvider } from "./context/SessionContext";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -8,25 +8,15 @@ import SessionReport from "./pages/SessionReport";
 
 import "./styles/globals.css";
 
-const ProtectedRoute = ({ children }) => {
-  const { sessionId } = useSession();
-  return sessionId ? children : <Navigate to="/login" />;
-};
-
 const AppRoutes = () => (
   <Routes>
     <Route path="/login" element={<Login />} />
     <Route path="/signup" element={<Signup />} />
 
-    <Route
-      path="/mentor"
-      element={
-        <ProtectedRoute>
-          <MentorIDE />
-        </ProtectedRoute>
-      }
-    />
+    {/* Mentor IDE*/}
+    <Route path="/mentor" element={<MentorIDE />} />
 
+    {/* Session Report */}
     <Route path="/report" element={<SessionReport />} />
 
     <Route path="*" element={<Navigate to="/login" />} />
