@@ -1,29 +1,41 @@
-import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SessionProvider, useSession } from "./context/SessionContext";
+
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import MentorIDE from "./pages/MentorIDE";
+
 import "./styles/globals.css";
 
-/**
- * AppContent exists so we can use SessionContext
- * BEFORE rendering the main UI
- */
-const AppContent = () => {
-  const { hypeMan } = useSession();
-
-  // Toggle global Hype-Man UI accent
-  useEffect(() => {
-    document.body.classList.toggle("hype-man", hypeMan);
-  }, [hypeMan]);
-
-  return <MentorIDE />;
+const ProtectedRoute = ({ children }) => {
+  const { user } = useSession();
+  return user ? children : <Navigate to="/login" />;
 };
 
-function App() {
+const AppRoutes = () => (
+  <Routes>
+    <Route path="/login" element={<Login />} />
+    <Route path="/signup" element={<Signup />} />
+    <Route
+      path="/mentor"
+      element={
+        <ProtectedRoute>
+          <MentorIDE />
+        </ProtectedRoute>
+      }
+    />
+    <Route path="*" element={<Navigate to="/login" />} />
+  </Routes>
+);
+
+const App = () => {
   return (
     <SessionProvider>
-      <AppContent />
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
     </SessionProvider>
   );
-}
+};
 
 export default App;
