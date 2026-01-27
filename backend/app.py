@@ -230,7 +230,7 @@ def handle_vision(data):
     except Exception as e:
         error_str = str(e)
         if "503" in error_str:
-            print("🚨 Gemini is overloaded. Sending fallback...")
+            print(" Gemini is overloaded. Sending fallback...")
             emit('mentor_feedback', {
                 "vibe": "neutral",
                 "logic_check": True,
