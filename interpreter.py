@@ -1,24 +1,21 @@
 from google.genai import types
+from google import genai
 
 def get_interpreter_brief(client, processed_frame, session_signature):
     """
-    The Interpreter Agent: Extracts code from the vission and give a briefing about bugs and logical errors!
+    The Interpreter Agent: Extracts code and identifies the bug.
     """
     
-    # I'll tell Gemini to be a static analyzer.
+    # Define the prompt specifically for the Interpreter
     interpreter_prompt = """
     Act as a Static Code Analyzer.
-    1. Extract the code from the image provided.
-    2. Identify the language (C++, Python, etc.).
-    3. Find the EXACT logical flaw (e.g., off-by-one, memory leak, infinite loop).
-    4. Output a hidden technical brief for the mentor agent.
-    
-    RULES: 
-    - Do NOT talk to the user. 
-    - Be brief and technical.
-    - If no code is found, state 'NO_CODE_DETECTED_YET'.
+    1. Extract the code from the image.
+    2. Identify the logical flaw (off-by-one, syntax, connection error).
+    3. Provide a technical brief for a mentor.
+    RULES: Technical only. Do not talk to the user.
     """
 
+    # 1. Use 'processed_frame' (the variable passed into the function)
     content = types.Content(
         role="user",
         parts=[
@@ -27,21 +24,29 @@ def get_interpreter_brief(client, processed_frame, session_signature):
         ]
     )
 
-    # Using HIGH thinking_level here
-    config = types.GenerateContentConfig(
-        thinking_config=types.ThinkingConfig(
-            thinking_level="HIGH",
-            include_thoughts=True
-        ),
-        # Passing the signature ensures the agent knows what's going on
-        thought_signature=session_signature 
-    )
+    # 2. Config bypass dictionary
+    config = {
+        "thinking_config": {
+            "thinking_level": "HIGH",
+            "include_thoughts": True
+        }
+    }
 
+    # 3. Call using the 'content' we just defined
     response = client.models.generate_content(
-        model="gemini-3-pro-preview",
-        contents=[content],
+        model="gemini-3-flash-preview", 
+        contents=[content], 
         config=config
     )
     
-    # Returning the hidden brief and the updates signature for the mentor agent
-    return response.text, response.candidates[0].content.parts[0].thought_signature
+    # 4. Safe signature extraction
+    new_signature = session_signature
+    try:
+        part = response.candidates[0].content.parts[0]
+        if hasattr(part, 'thought_signature'):
+            new_signature = part.thought_signature
+    except (AttributeError, IndexError):
+        pass
+
+    # Return the text (the brief) and the signature
+    return response.text, new_signature

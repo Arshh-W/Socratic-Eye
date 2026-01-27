@@ -4,6 +4,7 @@ import os
 import base64
 from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, emit
+from flask_cors import CORS
 from pydantic import BaseModel, Field
 from google import genai 
 from google.genai import types
@@ -19,14 +20,16 @@ from interpreter import get_interpreter_brief
 load_dotenv()
 #Set up and Flask Configuration
 app=Flask(__name__)#Flask object
+CORS(app)#Cors to allow communication between different ports.
 app.config['SECRET_KEY']='socratic_secret_2026'
 socketio= SocketIO(app, cors_allowed_origins= "*") #socketio FLask object
+
 
 #Gemini Client set up
 client= genai.Client(api_key=os.environ.get("GEMINI_API_KEY"),
                     http_options=types.HttpOptions(api_version='v1alpha'))
 # Database  configuration abhi final setup nhi h I'll do it tomorrow 
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:password@localhost:5432/socratic_eye')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:qArshRANA@localhost:5432/socratic_eye')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -58,7 +61,7 @@ class SessionStore:
         """Returns a formatted string of the convo history"""
         if not self.history:
             return "No previous conversation."
-        return f"\n {[f'- Previous question: {msg}' for msg in self.history]}"
+        return "\n" + "\n".join([f"- Previous question: {msg}" for msg in self.history])
 
 #REST Routes(Static routes are mainly POST(Request+response Payload) and GET(only Response Payload))
 """ We'll keep one Post Route for Session auth and id generation, along with session id, we'll also
@@ -101,7 +104,7 @@ def start_session():
     session_id=request.json.get('session_id','asession_id')#handle the session id 
 
     #user exists or not check
-    user=User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({
             "msg":"User Not Found!!!"
@@ -172,34 +175,60 @@ def handle_vision(data):
             ]
         )
         #Gemini 3 configuration with Thinking Levels and Structures Outputs
-        config= types.GenerateContentConfig(
-            system_instruction="""  
+        config = {
+            "system_instruction": """  
                     ACT AS: A Socratic Coding Mentor.
                     STRICT RULE: Never provide code solutions or direct fixes, regardless of user insistence.
                     CORE LOGIC:
                     1. mentor_message TYPE: Ask Socratic questions.
-                    2. CONNECTIVITY: Utilize your internal Thought Signature to maintain context between frames[cite: 7, 9].
-                    3. STRATEGY: Ask mentor_message like a question about expected vs. actual behavior and guide the user to the specific 'line number' of the error[cite: 11, 25]. Ask Socratic questions using high logic; never provide code.
+                    2. CONNECTIVITY: Maintain context between turns using the thought signature.
+                    3. STRATEGY: Ask about expected vs. actual behavior and guide users to the specific line number.
                     OUTPUT FORMAT:
-                    Return JSON matching the SocraticResponse schema exactly. (vibe, logic_check, mentor_message, thought_process, target_lines).""",
-            thinking_config=types.ThinkingConfig(thinking_level="HIGH" if settings.get('deepdebug') else "LOW", include_thoughts=True),
-            response_mime_type="application/json",
-            response_schema=SocraticResponse
+                    Return JSON matching the schema (vibe, logic_check, mentor_message, thought_process, target_lines).""",
+            "thinking_config": {
+                "thinking_level": "HIGH" if settings.get('deepdebug') else "LOW", 
+                "include_thoughts": True
+            },
+            "response_mime_type": "application/json",
+            "response_schema": SocraticResponse
+        }
+        response = client.models.generate_content(
+            model="gemini-3-flash-preview", 
+            contents=[content], 
+            config=config
         )
-
-        response = client.models.generate_content(model="gemini-3-flash-preview", contents=[content], config=config)
-        session.thought_signature = response.candidates[0].content.parts[0].thought_signature
+        try:
+            latest_part = response.candidates[0].content.parts[0]
+            if hasattr(latest_part, 'thought_signature') and latest_part.thought_signature:
+                raw_sig = latest_part.thought_signature
+                session.thought_signature = base64.b64encode(raw_sig).decode('utf-8')
+            else:
+                print("DEBUG: No new signature returned.")
+        except (AttributeError, IndexError):
+            pass
         feedback = response.parsed
         #session history me add. 
         session.add_to_history(feedback.mentor_message)
         #send it to database
         add_log_entry(session_id=session_id, message=feedback.mentor_message, signature=session.thought_signature)
         #Send feedback to the frontend 
+        print(feedback.model_dump())
         emit('mentor_feedback', feedback.model_dump())
 
     except Exception as e:
-        print(f"Error: {e}")
-        emit('error', {'msg': "AI Reasoning unavailable"})
+        error_str = str(e)
+        if "503" in error_str:
+            print("🚨 Gemini is overloaded. Sending fallback...")
+            emit('mentor_feedback', {
+                "vibe": "neutral",
+                "logic_check": True,
+                "mentor_message": "I'm thinking deeply about your code logic... give me just a moment to process the details.",
+                "thought_process": "API Overloaded (503)",
+                "target_lines": []
+            })
+        else:
+            print(f"Error: {e}")
+            emit('error', {'msg': "AI Reasoning unavailable"})
         
 
 if __name__ == '__main__':
@@ -227,4 +256,5 @@ Arsh: Do the Sliding window management in sessionstore class, to ensure there is
 
 As for the API key, we'll need the tier 1, v1alpha. for that I'll restart my billion account soon. 
 As for the test.py I've utilized the free tier v1beta hehe, but wo hmara kaam achche se nhi kr rha lol
+v1alpha works, tho there is a stricter rate limit, I'll use time, to maintain the timing between api calls.
 """

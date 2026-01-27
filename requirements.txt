@@ -1,5 +1,6 @@
 Flask
 Flask-SocketIO
+flask_cors
 eventlet
 google-genai
 pydantic
