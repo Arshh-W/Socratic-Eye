@@ -3,6 +3,8 @@ import { startSession } from "../api/sessionApi";
 import { useSession } from "../context/SessionContext";
 import { useMentorSocket } from "../hooks/useMentorSocket";
 import { useFrameStreamer } from "../hooks/useFrameStreamer";
+import { useNavigate } from "react-router-dom";
+
 
 import SocraticOrb from "../components/SocraticOrb/SocraticOrb";
 import MentorMessage from "../components/MentorMessage/MentorMessage";
@@ -18,6 +20,8 @@ const MentorIDE = () => {
   const ideRef = useRef(null); // Ref for the container
   const videoRef = useRef(null); // Ref for the actual video stream
   const [screenStarted, setScreenStarted] = useState(false);
+  const navigate = useNavigate();
+
 
   // Hook to handle frame logic
   const sendFrame = useFrameStreamer(ideRef);
@@ -53,17 +57,31 @@ const MentorIDE = () => {
     init();
   }, [user]);
 
-  const endSession = async () => {
+const endSession = async () => {
+  window.speechSynthesis.cancel();//will stop any ongoing speech 
+
+  if (!sessionId) {
+    alert("Session not found");
+    return;
+  }
+
   try {
-    const report = await getReport(sessionId);
-    alert(report.report); // Display the report in an alert(shi hai na??)
+    const res = await getReport(sessionId);
 
     socket.disconnect();
-    window.location.href = "/login";
+
+    navigate("/report", {
+      state: {
+        report: res.data.report,
+        message: res.data.message
+      }
+    });
   } catch (err) {
-    console.error(err);
+    console.error("End session failed:", err);
+    alert("Failed to generate report");
   }
 };
+
 
 
   // 🔹 2. Start Screen Share

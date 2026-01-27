@@ -35,6 +35,16 @@ const SettingsPanel = () => {
           aria-checked={hypeMan}
         />
       </div>
+
+      <div className="setting">
+      <label>Read Aloud</label>
+      <input
+        type="checkbox"
+        checked={readAloud}
+        onChange={() => setReadAloud(!readAloud)}
+      />
+    </div>
+
     </div>
   );
 };
