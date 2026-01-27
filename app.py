@@ -151,7 +151,7 @@ def handle_vision(data):
     if session_id in last_request_time:
         temp = current_time - last_request_time[session_id]
         if temp < 30:
-            print(f"⏳ Throttling session {session_id}. Please wait {30 - int(elapsed)}s.")
+            print(f"⏳ Throttling session {session_id}. Please wait {30 - int(temp)}s.")
             return # ignoring the request without any emits, to save us any extra api calls
     last_request_time[session_id] = current_time
     session = sessions[session_id]
@@ -160,7 +160,9 @@ def handle_vision(data):
         # 1. Preprocess(get's the frame preprocessed)
         raw_b64 = data.get('image').split(",")[1]
         processed_bytes = preprocess_frame(raw_b64)
-
+        if not processed_bytes:
+            print("Preprocessing failed")
+            return emit('error', {'msg': 'Vision processing failed'})
         # 2. INTERPRETER PASS(Gives the code review, brief)
         brief, session.thought_signature = get_interpreter_brief(client, processed_bytes, session.thought_signature)
 
@@ -220,7 +222,10 @@ def handle_vision(data):
         add_log_entry(session_id=session_id, message=feedback.mentor_message, signature=session.thought_signature)
         #Send feedback to the frontend 
         print(feedback.model_dump())
-        emit('mentor_feedback', feedback.model_dump())
+        try:
+            emit('mentor_feedback', feedback.model_dump())
+        except Exception as socket_err:
+            print(f"Failed to emit to socket: {socket_err}")
 
     except Exception as e:
         error_str = str(e)
