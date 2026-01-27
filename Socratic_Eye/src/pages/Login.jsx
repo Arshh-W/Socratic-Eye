@@ -13,8 +13,8 @@ const Login = () => {
     try {
       const res = await loginUser({ username, password });
       setUser({
-        id: res.user_Id,
-        username: res.username
+        id: res.data.user_Id,
+        username: res.data.username
       });
       navigate("/mentor");
     } catch (err) {
