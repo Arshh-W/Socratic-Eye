@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useRef } from "react";
 const SessionContext = createContext();
 
 export const SessionProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
   const [sessionId, setSessionId] = useState(null);
   const [mentorMessage, setMentorMessage] = useState("");
   const [vibe, setVibe] = useState("idle");
@@ -17,6 +18,8 @@ export const SessionProvider = ({ children }) => {
   return (
     <SessionContext.Provider
       value={{
+        user,
+        setUser,
         sessionId,
         setSessionId,
         mentorMessage,
