@@ -2,6 +2,7 @@
 #Let's import the required libraries first
 import os 
 import base64
+import time
 from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
@@ -62,7 +63,7 @@ class SessionStore:
         if not self.history:
             return "No previous conversation."
         return "\n" + "\n".join([f"- Previous question: {msg}" for msg in self.history])
-
+last_request_time = {}#Will maintain the time, to ensure ki 30 second me ek baar hi request jaye to the gemini api
 #REST Routes(Static routes are mainly POST(Request+response Payload) and GET(only Response Payload))
 """ We'll keep one Post Route for Session auth and id generation, along with session id, we'll also
  send awarm welcoming message to our user
@@ -146,7 +147,13 @@ def handle_vision(data):
     session_id = data.get('session_id')
     if session_id not in sessions:
         return emit('error', {'msg': 'Session not found!'})
-    
+    current_time = time.time()
+    if session_id in last_request_time:
+        temp = current_time - last_request_time[session_id]
+        if temp < 30:
+            print(f"⏳ Throttling session {session_id}. Please wait {30 - int(elapsed)}s.")
+            return # ignoring the request without any emits, to save us any extra api calls
+    last_request_time[session_id] = current_time
     session = sessions[session_id]
     settings = data.get('settings', {})
     try: 

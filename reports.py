@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 load_dotenv()
 client = genai.Client(
     api_key=os.environ.get("GEMINI_API_KEY"),
-    # http_options is usually only needed for specific proxy/version overrides
     http_options=types.HttpOptions(api_version='v1alpha') 
 )
 GEMINI_MODEL = "gemini-2.5-flash"
@@ -19,11 +18,10 @@ GEMINI_MODEL = "gemini-2.5-flash"
 def fetch_mentor_messages(db: Session, session_id: str) -> List[str]:
     # Wrap raw SQL in text()
     query = text("""
-        SELECT content
-        FROM mentor_messages
+        SELECT message
+        FROM session_logs 
         WHERE session_id = :session_id
-          AND role = 'mentor'
-        ORDER BY created_at ASC
+        ORDER BY timestamp ASC
     """)
 
     result = db.execute(query, {"session_id": session_id}).fetchall()
@@ -31,26 +29,24 @@ def fetch_mentor_messages(db: Session, session_id: str) -> List[str]:
 
 # PROMPT BUILDER
 def build_learning_report_prompt(messages: List[str]) -> str:
-    chronological_messages = "\n".join(
-        f"{i + 1}. {msg}" for i, msg in enumerate(messages)
-    )
+    chronological_messages = "\n".join(f"- {msg}" for msg in messages)
 
     return f"""
-Review the mentor messages below in order.
-Determine learning progress based on message progression.
-Output ONLY in this format:
-
-Concepts Mastered:
-- ...
-
-Logic Hurdles Cleared:
-- ...
-
-Next-Step Recommendations:
-- ...
-
-Mentor Messages:
+Act as a Senior Socratic Educator. Analyze this student's learning journey:
 {chronological_messages}
+
+Identify the specific Python errors they encountered (Syntax vs Logic).
+Summarize their 'Growth Moment' in 2 sentences.
+
+Output Format:
+### Session Summary
+...
+
+### Concepts Mastered
+- ...
+
+### Next-Step Recommendations
+- ...
 """.strip()
 
 # GEMINI CALL
@@ -58,7 +54,6 @@ def generate_learning_report(prompt: str) -> str:
     """
     Sends the prompt to Gemini Flash using the modern client.models.generate_content
     """
-    # Notice: No 'genai.GenerativeModel' instantiation needed here
     response = client.models.generate_content(
         model=GEMINI_MODEL,
         contents=prompt,
