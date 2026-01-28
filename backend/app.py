@@ -71,10 +71,8 @@ last_request_time = {}#Will maintain the time, to ensure ki 30 second me ek baar
 As for the GET Route, We'll send a report about the entire session to the user so that they know 
 what all they learned, and save it in the database whenever the user hits end session."""
 sessions={} 
-@app.route('/auth/signup', methods=['POST', 'OPTIONS'])
+@app.route('/auth/signup', methods=['POST'])
 def sign_up():
-    if request.method == 'OPTIONS':
-        return jsonify({"status": "ok"}), 200
     data = request.get_json()
     username = data.get('username', '').strip().lower()
     password = data.get('password')
