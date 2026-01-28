@@ -70,32 +70,51 @@ last_request_time = {}#Will maintain the time, to ensure ki 30 second me ek baar
 
 As for the GET Route, We'll send a report about the entire session to the user so that they know 
 what all they learned, and save it in the database whenever the user hits end session."""
-sessions={} #temporary storage baadme isse database se connect krdenge
-@app.route('/auth/signup',methods=['POST'])
+sessions={} 
+@app.route('/auth/signup', methods=['POST', 'OPTIONS'])
 def sign_up():
-    username=request.json.get('username')
-    password=request.json.get('password')
+    if request.method == 'OPTIONS':
+        return jsonify({"status": "ok"}), 200
+    data = request.get_json()
+    username = data.get('username', '').strip().lower()
+    password = data.get('password')
+
     if User.query.filter_by(username=username).first():
-        return jsonify({'msg':'User already exists, try another name!'}),400
-    new_user= User(username=username,
-    password_hash=generate_password_hash(password))
+        return jsonify({'msg': 'User already exists!'}), 400
+    new_user = User(username=username, password_hash=generate_password_hash(password))
     db.session.add(new_user)
     db.session.commit()
-    return jsonify({'msg':'Username successfully created!!', 'user_id': new_user.id })
-    
-@app.route('/auth/login',methods=['POST'])
+    response = jsonify({'msg': 'Username successfully created!!', 'user_id': new_user.id})
+    response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
+    return response, 201
+
+@app.route('/auth/login', methods=['POST', 'OPTIONS'])
 def login():
-    user= User.query.filter_by(username=request.json.get('username')).first()
-    if user and check_password_hash(user.password_hash, request.json.get('password')):
-        return jsonify({
-            'msg':'Succesfully logged in! Have fun learning',
-            'user_Id':user.id,
-            'username':user.username
+    if request.method == 'OPTIONS':
+        res = make_response()
+        res.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
+        res.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+        res.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        return res, 200
+
+    data = request.get_json()
+    username = data.get('username', '').strip().lower()
+    password = data.get('password')
+
+    user = User.query.filter_by(username=username).first()
+    
+    if user and check_password_hash(user.password_hash, password):
+        response = jsonify({
+            'msg': 'Successfully logged in!',
+            'user_Id': user.id,
+            'username': user.username
         })
-    else: 
-        return jsonify({
-            'msg':"Invalid Credentials, Kindly try again or singup if you're new"
-        }),400
+        response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
+        return response, 200
+    
+    error_res = jsonify({'msg': "Invalid Credentials"})
+    error_res.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
+    return error_res, 400
 
 @app.route('/auth/session',methods=['POST'])
 def start_session():
