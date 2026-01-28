@@ -58,8 +58,8 @@ def generate_learning_report(prompt: str) -> str:
         model=GEMINI_MODEL,
         contents=prompt,
         config=types.GenerateContentConfig(
-            temperature=0.3,
-            max_output_tokens=600
+            temperature=0.7,
+            max_output_tokens=1000
         )
     )
 

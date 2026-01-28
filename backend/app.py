@@ -88,33 +88,21 @@ def sign_up():
     response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
     return response, 201
 
-@app.route('/auth/login', methods=['POST', 'OPTIONS'])
+@app.route('/auth/login', methods=['POST'])
 def login():
-    if request.method == 'OPTIONS':
-        res = make_response()
-        res.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
-        res.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
-        res.headers.add("Access-Control-Allow-Headers", "Content-Type")
-        return res, 200
-
     data = request.get_json()
-    username = data.get('username', '').strip().lower()
+    username = data.get('username', '').strip().lower() 
     password = data.get('password')
 
     user = User.query.filter_by(username=username).first()
-    
     if user and check_password_hash(user.password_hash, password):
-        response = jsonify({
+        return jsonify({
             'msg': 'Successfully logged in!',
-            'user_Id': user.id,
+            'user_Id': user.id, 
             'username': user.username
-        })
-        response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
-        return response, 200
+        }), 200
     
-    error_res = jsonify({'msg': "Invalid Credentials"})
-    error_res.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
-    return error_res, 400
+    return jsonify({'msg': "Invalid Credentials"}), 400
 
 @app.route('/auth/session',methods=['POST'])
 def start_session():
