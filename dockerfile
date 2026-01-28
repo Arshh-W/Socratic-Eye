@@ -26,10 +26,13 @@ COPY backend/ ./backend/
 
 # 2. Setting up Frontend
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
+#nginx setup
+COPY nginx.conf /etc/nginx/sites-available/default
 #exposing ports
 EXPOSE 5000 80
 
-RUN echo "#!/bin/sh\nnginx\npython backend/app.py" > /app/start.sh
+RUN echo "#!/bin/sh\nnginx -g 'daemon off;' & \npython backend/app.py" > /app/start.sh
+
 RUN chmod +x /app/start.sh
 
 CMD ["/app/start.sh"]
