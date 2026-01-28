@@ -21,13 +21,16 @@ from interpreter import get_interpreter_brief
 load_dotenv()
 #Set up and Flask Configuration
 app=Flask(__name__)#Flask object
-CORS(app, resources={r"/*": {"origins": ["http://localhost", "http://127.0.0.1"]}}, supports_credentials=True)
+# Update this to include your Azure URL
+CORS(app, resources={r"/*": {"origins": ["http://localhost", "https://socratic-eye-app.azurewebsites.net"]}}, supports_credentials=True)
 app.config['SECRET_KEY']='socratic_secret_2026'
-socketio= SocketIO(app, cors_allowed_origins= "*") #socketio FLask object
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')#socketio FLask object
 
 
 #Gemini Client set up
-client= genai.Client(api_key=os.environ.get("GEMINI_API_KEY"),
+# This ensures that if the env var is missing, the SDK still tries its internal lookup
+api_key_val = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+client = genai.Client(api_key=api_key_val, 
                     http_options=types.HttpOptions(api_version='v1alpha'))
 # Database  configuration abhi final setup nhi h I'll do it tomorrow 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
@@ -156,6 +159,7 @@ and call our agents and models to feed on the data and generate structured repon
 """
 @socketio.on('stream_frame')
 def handle_vision(data):
+    print(f"DEBUG: Frame received for session {data.get('session_id')}")
     """handles the coming frames an# System Instruction for Gemini 3 Config 
        information from the frontend, and feeds it to our agents Interpreter and Mentor """
     session_id = data.get('session_id')
@@ -164,7 +168,7 @@ def handle_vision(data):
     current_time = time.time()
     if session_id in last_request_time:
         temp = current_time - last_request_time[session_id]
-        if temp < 30:
+        if temp < 5:
             print(f"⏳ Throttling session {session_id}. Please wait {30 - int(temp)}s.")
             return # ignoring the request without any emits, to save us any extra api calls
     last_request_time[session_id] = current_time
@@ -258,8 +262,8 @@ def handle_vision(data):
         
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
-
+    port = int(os.environ.get("WEBSITES_PORT", 80))
+    socketio.run(app, host='0.0.0.0', port=port, debug=False)
 #Next up: I'll do the login/signup and database set up
 #Sneha will make the OpenCV function for frame preprocessing and report generation function.
 #Then We'll move onto the agent building for interpreter/compiler logics and work on the prompt engineering part

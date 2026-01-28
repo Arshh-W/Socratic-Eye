@@ -2,6 +2,7 @@ Flask
 Flask-SocketIO
 flask_cors
 eventlet
+gunicorn
 google-genai
 pydantic
 opencv-python-headless

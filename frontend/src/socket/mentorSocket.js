@@ -1,13 +1,12 @@
 import { io } from "socket.io-client";
 
-const SOCKET_URL = "";
+// Ensure this matches your Azure Web App URL exactly
+const SOCKET_URL = "https://socratic-eye-app.azurewebsites.net";
 
-// 🔹 Force specific protocols to prevent Firefox "probing"
-export const socket = io(SOCKET_URL, {
-    transports: ['websocket'], //  NO polling; just pure websocket
-    autoConnect: true,
-    reconnection: true,        //  Aggressive reconnection
-    reconnectionAttempts: 20,  
-    reconnectionDelay: 1000,
-    timeout: 60000,          
+export const socket = io("https://socratic-eye-app.azurewebsites.net", {
+    transports: ['websocket'], //  Skip polling for Azure compatibility
+    upgrade: false,            //  Prevent upgrade attempts
+    path: "/socket.io/",       //  Explicitly define the path
+    secure: true,              //  Force WSS
+    reconnection: true
 });
