@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API = "http://localhost:5000";
+const API = "";
 
 export const getReport = async (sessionId) => {
   const res = await axios.get(`${API}/report`, {

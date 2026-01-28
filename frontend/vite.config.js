@@ -7,12 +7,12 @@ export default defineConfig({
     proxy: {
       // 🔹 Any call to /auth or /api will be sent to the backend automatically
       '/auth': {
-        target: 'http://localhost:5000',
+        target: '',
         changeOrigin: true,
         secure: false,
       },
       '/socket.io': {
-        target: 'ws://localhost:5000',
+        target: '',
         ws: true,
       }
     }

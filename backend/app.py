@@ -21,7 +21,7 @@ from interpreter import get_interpreter_brief
 load_dotenv()
 #Set up and Flask Configuration
 app=Flask(__name__)#Flask object
-CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}}, supports_credentials=True)
+CORS(app, resources={r"/*": {"origins": ["http://localhost", "http://127.0.0.1"]}}, supports_credentials=True)
 app.config['SECRET_KEY']='socratic_secret_2026'
 socketio= SocketIO(app, cors_allowed_origins= "*") #socketio FLask object
 
@@ -30,7 +30,10 @@ socketio= SocketIO(app, cors_allowed_origins= "*") #socketio FLask object
 client= genai.Client(api_key=os.environ.get("GEMINI_API_KEY"),
                     http_options=types.HttpOptions(api_version='v1alpha'))
 # Database  configuration abhi final setup nhi h I'll do it tomorrow 
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:qArshRANA@localhost:5432/socratic_eye')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
+    'DATABASE_URL', 
+    'postgresql://postgres:qArshRANA@db:5432/socratic_eye'
+)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -83,7 +86,7 @@ def sign_up():
     db.session.add(new_user)
     db.session.commit()
     response = jsonify({'msg': 'Username successfully created!!', 'user_id': new_user.id})
-    response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
+    response.headers.add("Access-Control-Allow-Origin", "http://localhost")
     return response, 201
 
 @app.route('/auth/login', methods=['POST'])
@@ -140,7 +143,7 @@ def generate_report():
             "report": report_string,
             "message": "We're signing off, Hope to see you soon"
         })
-        response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
+        response.headers.add("Access-Control-Allow-Origin", "http://localhost")
         return response
     except Exception as e:
         print(f"Report Error: {e}")
@@ -255,7 +258,7 @@ def handle_vision(data):
         
 
 if __name__ == '__main__':
-    socketio.run(app,debug=True, port=5000)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
 
 #Next up: I'll do the login/signup and database set up
 #Sneha will make the OpenCV function for frame preprocessing and report generation function.

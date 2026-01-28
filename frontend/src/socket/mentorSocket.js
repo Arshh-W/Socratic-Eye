@@ -1,6 +1,6 @@
 import { io } from "socket.io-client";
 
-const SOCKET_URL = "http://localhost:5000";
+const SOCKET_URL = "";
 
 // 🔹 Force specific protocols to prevent Firefox "probing"
 export const socket = io(SOCKET_URL, {
