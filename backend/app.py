@@ -21,7 +21,7 @@ from interpreter import get_interpreter_brief
 load_dotenv()
 #Set up and Flask Configuration
 app=Flask(__name__)#Flask object
-CORS(app)#Cors to allow communication between different ports.
+CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}}, supports_credentials=True)
 app.config['SECRET_KEY']='socratic_secret_2026'
 socketio= SocketIO(app, cors_allowed_origins= "*") #socketio FLask object
 
@@ -123,17 +123,23 @@ def start_session():
         "session_id":session_id,
         "message": f"Welcome Back, {user.username}! Let's learn some cool stuff!"
     })
-@app.route('/report',methods=['GET'])
+@app.route('/report', methods=['GET'])
 def generate_report():
-    """It will generate a session report based of the session memory from the current session
-    and then later(I'll connect it to the database for storing the sessions for users to look back at)
-    """
-    report_string= report_generation(db.session, request.args.get('session_id'))#We'll create this function in another py script, and will import it later
-    #later, I'll manage the database connectivty
-    return jsonify({
-        "report": report_string,
-        "message": " We're signing off, Hope to see you soon"
-    })
+    session_id = request.args.get('session_id')
+    if not session_id:
+        return jsonify({"error": "Missing session_id"}), 400
+    try:
+        report_string = report_generation(db.session, session_id)
+        
+        response = jsonify({
+            "report": report_string,
+            "message": "We're signing off, Hope to see you soon"
+        })
+        response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
+        return response
+    except Exception as e:
+        print(f"Report Error: {e}")
+        return jsonify({"error": "Internal Server Error"}), 500
 
 #WEBSOCKET EVENTS 
 """Events will be for the bi-directional streaming and conversation between frontend and backend
