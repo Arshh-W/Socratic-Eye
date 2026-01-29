@@ -14,7 +14,7 @@ export const useMentorSocket = () => {
     });
 
     socket.on("connect", () => console.log("Socket Connected"));
-    socket.on("disconnect", () => console.log("Socket Disconnected"));
+    //socket.on("disconnect", () => console.log("Socket Disconnected"));//Seems unncessary to me lol, what's the need if we have a timer either way
 
     return () => {
       socket.off("mentor_feedback");

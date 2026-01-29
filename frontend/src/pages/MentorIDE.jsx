@@ -31,7 +31,7 @@ const MentorIDE = () => {
   } = useSession();
 
   /**
-   * 🔊 Audio Priming (Firefox/Linux Fix)
+   *  Audio Priming (Firefox/Linux Fix)
    * Triggered on user gesture to bypass autoplay restrictions.
    */
   const unlockAudio = () => {
@@ -42,7 +42,7 @@ const MentorIDE = () => {
   };
 
   /**
-   * 🚀 Initialize Session
+   * Initialize Session
    * Creates a new session entry in PostgreSQL and gets the welcome message.
    */
   useEffect(() => {
@@ -63,7 +63,7 @@ const MentorIDE = () => {
   }, [user, setSessionId, setMentorMessage, setVibe]);
 
   /**
-   * 📸 Frame Streaming Logic
+   * Frame Streaming Logic
    * Sends the current screen state to the backend every 30 seconds.
    */
   // 🔹 Inside MentorIDE.jsx
@@ -71,7 +71,7 @@ useEffect(() => {
   // 🔹 Only start if we have a session and the screen is actually shared
   if (!screenStarted || !sessionId) return;
 
-  console.log("🚀 Stream Started for:", sessionId);
+  console.log("Stream Started for:", sessionId);
 
   // 🔹 Delay the FIRST frame to let the UI stabilize
   const initialTimeout = setTimeout(() => {
@@ -84,7 +84,7 @@ useEffect(() => {
   }, 30000);
 
   return () => {
-    console.log("🧹 Cleaning up stream timers");
+    console.log("Cleaning up stream timers");
     clearTimeout(initialTimeout);
     clearInterval(interval);
   };
@@ -110,7 +110,7 @@ useEffect(() => {
   };
 
   /**
-   * ⏹️ End Session & Generate Report
+   * ⏹End Session & Generate Report
    */
   const endSession = async () => {
     window.speechSynthesis.cancel();
