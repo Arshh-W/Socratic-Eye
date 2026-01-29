@@ -3,13 +3,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 const SessionReport = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  
-  // 🔹 Get the data passed from MentorIDE.jsx
   const report = location.state?.report || "No report data found.";
   const message = location.state?.message || "Session Summary";
 
   return (
-    <div style={{ padding: "40px", maxWidth: "auto", margin: "auto", color: "white", background: "#000", minHeight: "100vh" }}>
+    <div style={{ padding: "40px", maxWidth: "100%", margin: "auto", color: "white", background: "#000", minHeight: "100vh" }}>
       <h1 style={{ color: "#4fd1c5" }}>{message}</h1>
 
       <div style={{ 
@@ -20,13 +18,16 @@ const SessionReport = () => {
         padding: "20px", 
         borderRadius: "12px",
         border: "1px solid #333",
-        whiteSpace: "pre-line" 
+        whiteSpace: "pre-line",
+        overflow: "auto", 
+        maxHeight: "70vh",  
+        wordWrap: "break-word"  
       }}>
         {report}
       </div>
 
       <button
-        onClick={() => navigate("/login")} // 🔹 Use navigate instead of window.location
+        onClick={() => navigate("/login")}
         style={{
           marginTop: "40px",
           padding: "12px 24px",

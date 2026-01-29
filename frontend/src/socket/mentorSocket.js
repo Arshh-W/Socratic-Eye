@@ -8,5 +8,8 @@ export const socket = io("https://socratic-eye-app.azurewebsites.net", {
     upgrade: false,            //  Prevent upgrade attempts
     path: "/socket.io/",       //  Explicitly define the path
     secure: true,              //  Force WSS
-    reconnection: true
+    reconnection: true,
+    timeout: 60000,  // 60 seconds
+    pingInterval: 30000,  //every 30s
+    pingTimeout: 60000, 
 });
