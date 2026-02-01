@@ -20,7 +20,7 @@ const MentorIDE = () => {
 
   // Custom hooks for logic separation
   const sendFrame = useFrameStreamer(ideRef);
-  useMentorSocket();
+  const { processingStatus } = useMentorSocket(); 
 
   const {
     user,
@@ -66,31 +66,31 @@ const MentorIDE = () => {
    * Frame Streaming Logic
    * Sends the current screen state to the backend every 30 seconds.
    */
-  // 🔹 Inside MentorIDE.jsx
-useEffect(() => {
-  // 🔹 Only start if we have a session and the screen is actually shared
-  if (!screenStarted || !sessionId) return;
+  useEffect(() => {
+    // Only start if we have a session and the screen is actually shared
+    if (!screenStarted || !sessionId) return;
 
-  console.log("Stream Started for:", sessionId);
+    console.log("Stream Started for:", sessionId);
 
-  // 🔹 Delay the FIRST frame to let the UI stabilize
-  const initialTimeout = setTimeout(() => {
-    sendFrame(); 
-  }, 2000);
+    // Delay the FIRST frame to let the UI stabilize
+    const initialTimeout = setTimeout(() => {
+      sendFrame(); 
+    }, 2000);
 
-  // 🔹 Regular 30s interval
-  const interval = setInterval(() => {
-    sendFrame();
-  }, 30000);
+    // Regular 30s interval
+    const interval = setInterval(() => {
+      sendFrame();
+    }, 30000);
 
-  return () => {
-    console.log("Cleaning up stream timers");
-    clearTimeout(initialTimeout);
-    clearInterval(interval);
-  };
-}, [screenStarted, sessionId]); // 🔹 DO NOT add sendFrame here if it changes on every render
+    return () => {
+      console.log("Cleaning up stream timers");
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
+  }, [screenStarted, sessionId]);
+
   /**
-   * ▶️ Screen Share Initiation
+   *  Screen Share Initiation
    */
   const startScreenShare = async () => {
     try {
@@ -110,7 +110,8 @@ useEffect(() => {
   };
 
   /**
-   * ⏹End Session & Generate Report
+   * End Session & Generate Report
+   * error handling and user feedback
    */
   const endSession = async () => {
     window.speechSynthesis.cancel();
@@ -120,6 +121,9 @@ useEffect(() => {
       navigate("/mentor");
       return;
     }
+
+    // Adding loading state
+    setMentorMessage("Generating your learning report...");
 
     try {
       // Stop media tracks
@@ -142,17 +146,39 @@ useEffect(() => {
         }
       });
     } catch (err) {
-      console.error("❌ End session failed:", err);
-      if (window.confirm("Failed to generate report. Exit anyway?")) {
+      console.error("End session failed:", err);
+      
+      //More informative error message
+      const errorMessage = err.message || "Unknown error occurred";
+      setMentorMessage(`Report generation failed: ${errorMessage}`);
+      
+      if (window.confirm(`Failed to generate report: ${errorMessage}\n\nExit anyway?`)) {
+        if (socket.connected) socket.disconnect();
+        setSessionId(null);
         navigate("/mentor");
+      } else {
+        // User chose to stay, restore UI
+        setMentorMessage("");
       }
     }
   };
 
+  // debugging socket connection health
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      const interval = setInterval(() => {
+        console.log('🔍 Socket Debug:', {
+          connected: socket.connected,
+          id: socket.id,
+          sessionId: sessionId
+        });
+      }, 10000); // Every 10 seconds
+      return () => clearInterval(interval);
+    }
+  }, [sessionId]);
+
   return (
     <div style={{ position: "relative", height: "100vh", background: "#000", overflow: "hidden" }}>
-      
-      {/* 🛠️ Control UI */}
       <div style={{ 
         position: "absolute", 
         top: "20px", 
@@ -183,9 +209,24 @@ useEffect(() => {
         }}>
           ⏹ End Session
         </button>
+
+        {/*Showing processing status to user */}
+        {processingStatus && (
+          <div style={{
+            background: "#1a202c",
+            color: "#4fd1c5",
+            padding: "8px 12px",
+            borderRadius: "6px",
+            fontSize: "0.85rem",
+            border: "1px solid #2d3748",
+            maxWidth: "250px"
+          }}>
+            ⏳ {processingStatus}
+          </div>
+        )}
       </div>
 
-      {/* 📺 Visual Core (What the AI Sees) */}
+      {/* Visual Core (What the AI Sees) */}
       <div ref={ideRef} style={{ 
         height: "100%", 
         width: "100%", 
@@ -214,7 +255,7 @@ useEffect(() => {
         )}
       </div>
 
-      {/* 🪄 Floating AI UI Layers */}
+      {/*Floating AI UI Layers */}
       <CodeOverlay />
       <SettingsPanel />
       <FocusMeter />

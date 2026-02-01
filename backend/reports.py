@@ -51,22 +51,54 @@ def generate_learning_report(prompt: str) -> str:
     """
     Sends the prompt to Gemini Flash using the modern client.models.generate_content
     """
-    response = client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            temperature=0.3,
-            max_output_tokens=400
+    try:
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.3,
+                max_output_tokens=1500  
+            )
         )
-    )
 
-    return response.text
+        return response.text
+    except Exception as e:
+        print(f" Gemini report generation error: {e}")
+        return f"""
+### Session Summary
+Your session completed, but we encountered an issue generating the detailed report.
+
+**Error**: {str(e)}
+
+Please check the session logs in the database for your learning history.
+        """.strip()
+
 
 def report_generation(db: Session, session_id: str) -> str:
-    mentor_messages = fetch_mentor_messages(db, session_id)
+    try:
+        mentor_messages = fetch_mentor_messages(db, session_id)
 
-    if not mentor_messages:
-        return "No mentor messages found for this session."
+        if not mentor_messages:
+            #  Better empty state message
+            return """
+### Session Summary
+No mentor interactions were recorded during this session.
 
-    prompt = build_learning_report_prompt(mentor_messages)
-    return generate_learning_report(prompt)
+**Tip**: Make sure to share your screen and wait for the AI to analyze your code.
+            """.strip()
+
+        prompt = build_learning_report_prompt(mentor_messages)
+        return generate_learning_report(prompt)
+    except Exception as e:
+        print(f" Report generation error: {e}")
+        #  Error handling at top level
+        return f"""
+### Session Report Error
+We encountered an issue accessing your session data.
+
+**Error**: {str(e)}
+
+**Session ID**: {session_id}
+
+Please contact support if this persists.
+        """.strip()
