@@ -1,15 +1,37 @@
 import { io } from "socket.io-client";
 
-// Ensure this matches your Azure Web App URL exactly
+// using wss:// instead of ws://
 const SOCKET_URL = "https://socratic-eye-app.azurewebsites.net";
 
-export const socket = io("https://socratic-eye-app.azurewebsites.net", {
-    transports: ['websocket'], //  Skip polling for Azure compatibility
-    upgrade: false,            //  Prevent upgrade attempts
-    path: "/socket.io/",       //  Explicitly define the path
-    secure: true,              //  Force WSS
+export const socket = io(SOCKET_URL, {
+    transports: ['websocket', 'polling'],// adding polling as a fallback
+    upgrade: true,            
+    path: "/socket.io/",
+    secure: true,             
     reconnection: true,
-    timeout: 60000,  // 60 seconds
-    pingInterval: 30000,  //every 30s
-    pingTimeout: 60000, 
+    reconnectionAttempts: 5,    
+    reconnectionDelay: 1000,   
+    reconnectionDelayMax: 5000, 
+    timeout: 20000,            
+    pingInterval: 25000,
+    pingTimeout: 60000,
+    forceNew: false,            
+    autoConnect: true,          
 });
+
+socket.on("connect_error", (error) => {
+    console.error("Socket connection error:", error.message);
+    console.error("Error details:", {
+        type: error.type,
+        description: error.description,
+        context: error.context
+    });
+});
+
+socket.on("connect", () => {
+    console.log("Socket connected successfully");
+    console.log("Socket ID:", socket.id);
+    console.log("Transport:", socket.io.engine.transport.name);
+});
+
+export default socket;

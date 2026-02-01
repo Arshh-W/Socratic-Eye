@@ -29,7 +29,6 @@ COPY backend/ ./backend/
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
 
 # 3. Nginx Configuration
-# Remove the default config and add yours
 RUN rm /etc/nginx/sites-enabled/default
 COPY nginx.conf /etc/nginx/sites-enabled/default
 

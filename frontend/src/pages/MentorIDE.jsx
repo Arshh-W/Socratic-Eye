@@ -12,15 +12,29 @@ import CodeOverlay from "../components/CodeOverlay/CodeOverlay";
 import FocusMeter from "../components/FocusMeter/FocusMeter";
 import SettingsPanel from "../components/SettingsPanel/SettingsPanel";
 
+// Browser-compatible UUID generator
+const generateUUID = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 const MentorIDE = () => {
   const navigate = useNavigate();
   const ideRef = useRef(null); 
   const videoRef = useRef(null); 
   const [screenStarted, setScreenStarted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(""); // adding error state
 
   // Custom hooks for logic separation
   const sendFrame = useFrameStreamer(ideRef);
-  const { processingStatus } = useMentorSocket(); 
+  const { processingStatus } = useMentorSocket();
 
   const {
     user,
@@ -50,13 +64,15 @@ const MentorIDE = () => {
       try {
         const res = await startSession({
           user_id: user?.id || 1, // Fallback for testing
-          session_id: crypto.randomUUID()
+          session_id: generateUUID() //Using compatible UUID generator
         });
         setSessionId(res.session_id);
         setMentorMessage(res.message);
         setVibe("listening");
+        setErrorMessage(""); // Clear any previous errors
       } catch (err) {
         console.error("Session Init Failed:", err);
+        setErrorMessage("Failed to initialize session. Please check your connection.");
       }
     };
     if (user) init();
@@ -91,9 +107,17 @@ const MentorIDE = () => {
 
   /**
    *  Screen Share Initiation
+   * FIX: Added browser compatibility checks
    */
   const startScreenShare = async () => {
     try {
+      // Check if screen capture API is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        setErrorMessage("Screen sharing is not supported in your browser. Please use Chrome, Edge, or Firefox on HTTPS.");
+        alert("Screen sharing requires:\n1. A modern browser (Chrome, Edge, Firefox)\n2. HTTPS connection\n\nPlease access the app via https://");
+        return;
+      }
+
       unlockAudio(); 
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: { frameRate: 1 }, 
@@ -103,15 +127,22 @@ const MentorIDE = () => {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setScreenStarted(true);
+        setErrorMessage(""); // Clear error on success
       }
     } catch (err) {
       console.error("Screen share failed:", err);
+      if (err.name === 'NotAllowedError') {
+        setErrorMessage("Screen sharing permission denied. Please allow screen access.");
+      } else if (err.name === 'NotSupportedError') {
+        setErrorMessage("Screen sharing is not supported. Please use HTTPS.");
+      } else {
+        setErrorMessage(`Screen sharing failed: ${err.message}`);
+      }
     }
   };
 
   /**
-   * End Session & Generate Report
-   * error handling and user feedback
+   * ⏹ End Session & Generate Report
    */
   const endSession = async () => {
     window.speechSynthesis.cancel();
@@ -122,7 +153,7 @@ const MentorIDE = () => {
       return;
     }
 
-    // Adding loading state
+    // Add loading state
     setMentorMessage("Generating your learning report...");
 
     try {
@@ -146,9 +177,8 @@ const MentorIDE = () => {
         }
       });
     } catch (err) {
-      console.error("End session failed:", err);
+      console.error(" End session failed:", err);
       
-      //More informative error message
       const errorMessage = err.message || "Unknown error occurred";
       setMentorMessage(`Report generation failed: ${errorMessage}`);
       
@@ -163,7 +193,7 @@ const MentorIDE = () => {
     }
   };
 
-  // debugging socket connection health
+  //  Debug socket connection health
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       const interval = setInterval(() => {
@@ -179,6 +209,8 @@ const MentorIDE = () => {
 
   return (
     <div style={{ position: "relative", height: "100vh", background: "#000", overflow: "hidden" }}>
+      
+      {/* Control UI */}
       <div style={{ 
         position: "absolute", 
         top: "20px", 
@@ -186,7 +218,8 @@ const MentorIDE = () => {
         zIndex: 3000, 
         display: "flex", 
         flexDirection: "column", 
-        gap: "15px" 
+        gap: "15px",
+        maxWidth: "300px"
       }}>
         {!screenStarted ? (
           <button onClick={startScreenShare} className="btn-primary" style={{ padding: "12px 24px", cursor: "pointer" }}>
@@ -210,7 +243,7 @@ const MentorIDE = () => {
           ⏹ End Session
         </button>
 
-        {/*Showing processing status to user */}
+        {/*processing status */}
         {processingStatus && (
           <div style={{
             background: "#1a202c",
@@ -218,12 +251,47 @@ const MentorIDE = () => {
             padding: "8px 12px",
             borderRadius: "6px",
             fontSize: "0.85rem",
-            border: "1px solid #2d3748",
-            maxWidth: "250px"
+            border: "1px solid #2d3748"
           }}>
             ⏳ {processingStatus}
           </div>
         )}
+
+        {/* Show error messages */}
+        {errorMessage && (
+          <div style={{
+            background: "#742a2a",
+            color: "#feb2b2",
+            padding: "10px 12px",
+            borderRadius: "6px",
+            fontSize: "0.85rem",
+            border: "1px solid #9b2c2c",
+            lineHeight: "1.4"
+          }}>
+            {errorMessage}
+          </div>
+        )}
+
+        {/*Connection status indicator */}
+        <div style={{
+          background: socket.connected ? "#1a3a1a" : "#3a1a1a",
+          color: socket.connected ? "#9ae6b4" : "#fc8181",
+          padding: "6px 10px",
+          borderRadius: "6px",
+          fontSize: "0.75rem",
+          border: `1px solid ${socket.connected ? "#2f855a" : "#c53030"}`,
+          display: "flex",
+          alignItems: "center",
+          gap: "6px"
+        }}>
+          <div style={{
+            width: "8px",
+            height: "8px",
+            borderRadius: "50%",
+            background: socket.connected ? "#48bb78" : "#f56565"
+          }} />
+          {socket.connected ? "Connected" : "Disconnected"}
+        </div>
       </div>
 
       {/* Visual Core (What the AI Sees) */}
@@ -251,11 +319,14 @@ const MentorIDE = () => {
           <div style={{ color: "#4fd1c5", fontFamily: "monospace", textAlign: "center" }}>
             <p>EYE STATUS: OFFLINE</p>
             <p style={{ fontSize: "0.8rem", color: "#666" }}>Waiting for screen stream...</p>
+            <p style={{ fontSize: "0.7rem", color: "#444", marginTop: "10px" }}>
+               Requires HTTPS for screen sharing
+            </p>
           </div>
         )}
       </div>
 
-      {/*Floating AI UI Layers */}
+      {/*  Floating AI UI Layers */}
       <CodeOverlay />
       <SettingsPanel />
       <FocusMeter />

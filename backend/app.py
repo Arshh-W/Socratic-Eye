@@ -24,7 +24,7 @@ app=Flask(__name__)#Flask object
 # Update this to include your Azure URL
 CORS(app, resources={r"/*": {"origins": ["http://localhost", "https://socratic-eye-app.azurewebsites.net"]}}, supports_credentials=True)
 app.config['SECRET_KEY']='socratic_secret_2026'
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet',ping_timeout=60,ping_interval=25, engineio_logger=True,logger=True)#socketio FLask object
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading',ping_timeout=60,ping_interval=25, engineio_logger=True,logger=True)#socketio FLask object
 
 #Gemini Client set up
 # This ensures that if the env var is missing, the SDK still tries its internal lookup
