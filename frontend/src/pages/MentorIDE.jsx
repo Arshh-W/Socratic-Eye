@@ -52,7 +52,7 @@ const MentorIDE = () => {
     const speak = new SpeechSynthesisUtterance("System active");
     speak.volume = 0.1;
     window.speechSynthesis.speak(speak);
-    console.log("🔊 Audio Context Unlocked");
+    console.log("Audio Context Unlocked");
   };
 
   /**
@@ -64,7 +64,7 @@ const MentorIDE = () => {
       try {
         const res = await startSession({
           user_id: user?.id || 1, // Fallback for testing
-          session_id: generateUUID() //Using compatible UUID generator
+          session_id: generateUUID() // Using compatible UUID generator
         });
         setSessionId(res.session_id);
         setMentorMessage(res.message);
@@ -106,8 +106,8 @@ const MentorIDE = () => {
   }, [screenStarted, sessionId]);
 
   /**
-   *  Screen Share Initiation
-   * FIX: Added browser compatibility checks
+   * Screen Share Initiation
+   * Added browser compatibility checks
    */
   const startScreenShare = async () => {
     try {
@@ -142,7 +142,7 @@ const MentorIDE = () => {
   };
 
   /**
-   * ⏹ End Session & Generate Report
+   * End Session & Generate Report
    */
   const endSession = async () => {
     window.speechSynthesis.cancel();
@@ -177,7 +177,7 @@ const MentorIDE = () => {
         }
       });
     } catch (err) {
-      console.error(" End session failed:", err);
+      console.error("End session failed:", err);
       
       const errorMessage = err.message || "Unknown error occurred";
       setMentorMessage(`Report generation failed: ${errorMessage}`);
@@ -193,11 +193,11 @@ const MentorIDE = () => {
     }
   };
 
-  //  Debug socket connection health
+  // Debug socket connection health
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       const interval = setInterval(() => {
-        console.log('🔍 Socket Debug:', {
+        console.log('Socket Debug:', {
           connected: socket.connected,
           id: socket.id,
           sessionId: sessionId
@@ -223,11 +223,11 @@ const MentorIDE = () => {
       }}>
         {!screenStarted ? (
           <button onClick={startScreenShare} className="btn-primary" style={{ padding: "12px 24px", cursor: "pointer" }}>
-            ▶ Start Screen Share
+            Start Screen Share
           </button>
         ) : (
           <button onClick={() => sendFrame()} className="btn-secondary" style={{ cursor: "pointer" }}>
-            📸 Manual Analysis
+            Manual Analysis
           </button>
         )}
 
@@ -240,10 +240,10 @@ const MentorIDE = () => {
           fontWeight: "bold", 
           cursor: "pointer" 
         }}>
-          ⏹ End Session
+          End Session
         </button>
 
-        {/*processing status */}
+        {/* processing status */}
         {processingStatus && (
           <div style={{
             background: "#1a202c",
@@ -253,7 +253,7 @@ const MentorIDE = () => {
             fontSize: "0.85rem",
             border: "1px solid #2d3748"
           }}>
-            ⏳ {processingStatus}
+            {processingStatus}
           </div>
         )}
 
@@ -272,7 +272,7 @@ const MentorIDE = () => {
           </div>
         )}
 
-        {/*Connection status indicator */}
+        {/* Connection status indicator */}
         <div style={{
           background: socket.connected ? "#1a3a1a" : "#3a1a1a",
           color: socket.connected ? "#9ae6b4" : "#fc8181",
@@ -320,13 +320,13 @@ const MentorIDE = () => {
             <p>EYE STATUS: OFFLINE</p>
             <p style={{ fontSize: "0.8rem", color: "#666" }}>Waiting for screen stream...</p>
             <p style={{ fontSize: "0.7rem", color: "#444", marginTop: "10px" }}>
-               Requires HTTPS for screen sharing
+              Requires HTTPS for screen sharing
             </p>
           </div>
         )}
       </div>
 
-      {/*  Floating AI UI Layers */}
+      {/* Floating AI UI Layers */}
       <CodeOverlay />
       <SettingsPanel />
       <FocusMeter />
