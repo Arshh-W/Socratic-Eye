@@ -24,8 +24,7 @@ app=Flask(__name__)#Flask object
 # Update this to include your Azure URL
 CORS(app, resources={r"/*": {"origins": ["http://localhost", "https://socratic-eye-app.azurewebsites.net"]}}, supports_credentials=True)
 app.config['SECRET_KEY']='socratic_secret_2026'
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')#socketio FLask object
-
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet',ping_timeout=60,ping_interval=25, engineio_logger=True,logger=True)#socketio FLask object
 
 #Gemini Client set up
 # This ensures that if the env var is missing, the SDK still tries its internal lookup
@@ -160,30 +159,43 @@ and call our agents and models to feed on the data and generate structured repon
 @socketio.on('stream_frame')
 def handle_vision(data):
     print(f"DEBUG: Frame received for session {data.get('session_id')}")
-    """handles the coming frames an# System Instruction for Gemini 3 Config 
-       information from the frontend, and feeds it to our agents Interpreter and Mentor """
     session_id = data.get('session_id')
+    
     if session_id not in sessions:
         return emit('error', {'msg': 'Session not found!'})
+    #Letting frontend know ki I received the frames(to keep connection seem active to frontend websocket)
+    emit('frame_received', {'status': 'processing', 'session_id': session_id})
+    
     current_time = time.time()
     if session_id in last_request_time:
         temp = current_time - last_request_time[session_id]
         if temp < 5:
             print(f"⏳ Throttling session {session_id}. Please wait {30 - int(temp)}s.")
-            return # ignoring the request without any emits, to save us any extra api calls
+            return emit('throttled', {
+                'msg': f'Please wait {5 - int(temp)} seconds before next request',
+                'retry_after': 5 - int(temp)
+            })
+    
     last_request_time[session_id] = current_time
     session = sessions[session_id]
     settings = data.get('settings', {})
+    
     try: 
-        # 1. Preprocess(get's the frame preprocessed)
+        # 1. Preprocess
         raw_b64 = data.get('image').split(",")[1]
         processed_bytes = preprocess_frame(raw_b64)
         if not processed_bytes:
             print("Preprocessing failed")
             return emit('error', {'msg': 'Vision processing failed'})
-        # 2. INTERPRETER PASS(Gives the code review, brief)
+        #More communication with the frontend websocket, to keep it active at each step
+        emit('processing_update', {'stage': 'interpreter', 'status': 'analyzing code'})
+        
+        # 2. INTERPRETER PASS
         brief, session.thought_signature = get_interpreter_brief(client, processed_bytes, session.thought_signature)
 
+        #Progress update for the frontend websocket(So that I can see in console what's going wrong)
+        emit('processing_update', {'stage': 'mentor', 'status': 'generating question'})
+        
         # 3. Mentor
         past_questions = session.get_context_string()
 
@@ -201,7 +213,7 @@ def handle_vision(data):
                 """)
             ]
         )
-        #Gemini 3 configuration with Thinking Levels and Structures Outputs
+        
         config = {
             "system_instruction": """  
                     ACT AS: A Socratic Coding Mentor.
@@ -219,11 +231,13 @@ def handle_vision(data):
             "response_mime_type": "application/json",
             "response_schema": SocraticResponse
         }
+        
         response = client.models.generate_content(
             model="gemini-3-flash-preview", 
             contents=[content], 
             config=config
         )
+        
         try:
             latest_part = response.candidates[0].content.parts[0]
             if hasattr(latest_part, 'thought_signature') and latest_part.thought_signature:
@@ -233,22 +247,25 @@ def handle_vision(data):
                 print("DEBUG: No new signature returned.")
         except (AttributeError, IndexError):
             pass
+        
         feedback = response.parsed
-        #session history me add. 
         session.add_to_history(feedback.mentor_message)
-        #send it to database
         add_log_entry(session_id=session_id, message=feedback.mentor_message, signature=session.thought_signature)
-        #Send feedback to the frontend 
+        
         print(feedback.model_dump())
+        #
         try:
             emit('mentor_feedback', feedback.model_dump())
+            print(f"Feedback emitted successfully for session {session_id}")
         except Exception as socket_err:
             print(f"Failed to emit to socket: {socket_err}")
+            # notifying frontend of the error 
+            emit('error', {'msg': 'Failed to send feedback'})
 
     except Exception as e:
         error_str = str(e)
         if "503" in error_str:
-            print(" Gemini is overloaded. Sending fallback...")
+            print("Gemini is overloaded. Sending fallback!!!")
             emit('mentor_feedback', {
                 "vibe": "neutral",
                 "logic_check": True,
@@ -256,9 +273,9 @@ def handle_vision(data):
                 "thought_process": "API Overloaded (503)",
                 "target_lines": []
             })
-        else:
+        else:#catching any other errors. 
             print(f"Error: {e}")
-            emit('error', {'msg': "AI Reasoning unavailable"})
+            emit('error', {'msg': "AI Reasoning unavailable", 'details': str(e)})
         
 
 if __name__ == '__main__':

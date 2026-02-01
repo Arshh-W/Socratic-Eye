@@ -9,6 +9,7 @@
 **/*.pyo
 **/*.pyd
 .env
+.venv
 
 # Node / Frontend
 **/node_modules/
