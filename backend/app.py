@@ -21,13 +21,21 @@ from interpreter import get_interpreter_brief
 load_dotenv()
 #Set up and Flask Configuration
 app=Flask(__name__)#Flask object
-# Update this to include your Azure URL
+
 CORS(app, resources={r"/*": {"origins": ["http://localhost", "https://socratic-eye-app.azurewebsites.net"]}}, supports_credentials=True)
 app.config['SECRET_KEY']='socratic_secret_2026'
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading',ping_timeout=60,ping_interval=25, engineio_logger=True,logger=True)#socketio FLask object
+
+socketio = SocketIO(
+    app, 
+    cors_allowed_origins="*", 
+    async_mode='threading',
+    ping_timeout=120, 
+    ping_interval=30,  
+    engineio_logger=True,
+    logger=True
+)
 
 #Gemini Client set up
-# This ensures that if the env var is missing, the SDK still tries its internal lookup
 api_key_val = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key_val, 
                     http_options=types.HttpOptions(api_version='v1alpha'))
@@ -68,7 +76,10 @@ class SessionStore:
         if not self.history:
             return "No previous conversation."
         return "\n" + "\n".join([f"- Previous question: {msg}" for msg in self.history])
-last_request_time = {}#Will maintain the time, to ensure ki 30 second me ek baar hi request jaye to the gemini api
+
+THROTTLE_SECONDS = 30 
+last_request_time = {}
+
 #REST Routes(Static routes are mainly POST(Request+response Payload) and GET(only Response Payload))
 """ We'll keep one Post Route for Session auth and id generation, along with session id, we'll also
  send awarm welcoming message to our user
@@ -162,36 +173,55 @@ def handle_vision(data):
     session_id = data.get('session_id')
     
     if session_id not in sessions:
-        return emit('error', {'msg': 'Session not found!'})
-    #Letting frontend know ki I received the frames(to keep connection seem active to frontend websocket)
-    emit('frame_received', {'status': 'processing', 'session_id': session_id})
-    
+        print(f"ERROR: Session {session_id} not found in memory store")
+        return emit('error', {'msg': 'Session not found! Please refresh the page.'})
+
     current_time = time.time()
     if session_id in last_request_time:
-        temp = current_time - last_request_time[session_id]
-        if temp < 5:
-            print(f"⏳ Throttling session {session_id}. Please wait {30 - int(temp)}s.")
+        time_since_last = current_time - last_request_time[session_id]
+        if time_since_last < THROTTLE_SECONDS:
+            wait_time = THROTTLE_SECONDS - int(time_since_last)
+            print(f"⏳ Throttling session {session_id}. Please wait {wait_time}s.")
             return emit('throttled', {
-                'msg': f'Please wait {5 - int(temp)} seconds before next request',
-                'retry_after': 5 - int(temp)
+                'msg': f'Please wait {wait_time} seconds before next request',
+                'retry_after': wait_time
             })
     
     last_request_time[session_id] = current_time
+    
+    #Letting frontend know ki I received the frames(to keep connection seem active to frontend websocket)
+    emit('frame_received', {'status': 'processing', 'session_id': session_id})
+    
     session = sessions[session_id]
     settings = data.get('settings', {})
     
     try: 
         # 1. Preprocess
-        raw_b64 = data.get('image').split(",")[1]
+        raw_b64 = data.get('image')
+        if not raw_b64:
+            print("ERROR: No image data received")
+            return emit('error', {'msg': 'No image data received'})
+        try:
+            raw_b64 = raw_b64.split(",")[1]
+        except IndexError:
+            print("ERROR: Invalid image format")
+            return emit('error', {'msg': 'Invalid image format'})
+        
         processed_bytes = preprocess_frame(raw_b64)
         if not processed_bytes:
-            print("Preprocessing failed")
-            return emit('error', {'msg': 'Vision processing failed'})
+            print("ERROR: Preprocessing failed - returned None or empty")
+            return emit('error', {'msg': 'Failed to process image. Please try again.'})
+        
         #More communication with the frontend websocket, to keep it active at each step
         emit('processing_update', {'stage': 'interpreter', 'status': 'analyzing code'})
         
         # 2. INTERPRETER PASS
-        brief, session.thought_signature = get_interpreter_brief(client, processed_bytes, session.thought_signature)
+        try:
+            brief, session.thought_signature = get_interpreter_brief(client, processed_bytes, session.thought_signature)
+            print(f"DEBUG: Interpreter brief generated: {brief[:100]}...")
+        except Exception as interp_error:
+            print(f"ERROR: Interpreter failed: {interp_error}")
+            return emit('error', {'msg': 'Failed to analyze code. Please try again.'})
 
         #Progress update for the frontend websocket(So that I can see in console what's going wrong)
         emit('processing_update', {'stage': 'mentor', 'status': 'generating question'})
@@ -232,50 +262,84 @@ def handle_vision(data):
             "response_schema": SocraticResponse
         }
         
-        response = client.models.generate_content(
-            model="gemini-3-flash-preview", 
-            contents=[content], 
-            config=config
-        )
+        print(f"DEBUG: Calling Gemini API for session {session_id}")
+        try:
+            response = client.models.generate_content(
+                model="gemini-3-flash-preview", 
+                contents=[content], 
+                config=config
+            )
+            print(f"DEBUG: Gemini API response received for session {session_id}")
+        except Exception as api_error:
+            error_str = str(api_error)
+            print(f"ERROR: Gemini API call failed: {error_str}")
+            
+            if "503" in error_str or "overloaded" in error_str.lower():
+                print("Gemini is overloaded. Sending fallback message.")
+                return emit('mentor_feedback', {
+                    "vibe": "neutral",
+                    "logic_check": True,
+                    "mentor_message": "I'm thinking deeply about your code... The AI is temporarily overloaded. Please try again in a moment.",
+                    "thought_process": "API Overloaded (503)",
+                    "target_lines": []
+                })
+            elif "429" in error_str or "rate limit" in error_str.lower():
+                print("Rate limit hit. Sending fallback message.")
+                return emit('mentor_feedback', {
+                    "vibe": "neutral",
+                    "logic_check": True,
+                    "mentor_message": "I need a moment to catch my breath. Too many questions at once! Try again in 30 seconds.",
+                    "thought_process": "Rate Limited (429)",
+                    "target_lines": []
+                })
+            elif "timeout" in error_str.lower():
+                print("API timeout. Sending fallback message.")
+                return emit('error', {'msg': 'The AI took too long to respond. Please try again.'})
+            else:
+                return emit('error', {'msg': f'AI service error: {error_str[:100]}'})
         
         try:
             latest_part = response.candidates[0].content.parts[0]
             if hasattr(latest_part, 'thought_signature') and latest_part.thought_signature:
                 raw_sig = latest_part.thought_signature
                 session.thought_signature = base64.b64encode(raw_sig).decode('utf-8')
+                print("DEBUG: New thought signature saved")
             else:
-                print("DEBUG: No new signature returned.")
-        except (AttributeError, IndexError):
-            pass
+                print("DEBUG: No new signature returned, keeping existing one")
+        except (AttributeError, IndexError) as sig_error:
+            print(f"WARNING: Could not extract thought signature: {sig_error}")
+        try:
+            feedback = response.parsed
+            if not feedback or not hasattr(feedback, 'mentor_message'):
+                print("ERROR: Invalid response format from API")
+                return emit('error', {'msg': 'Received invalid response from AI. Please try again.'})
+            
+            session.add_to_history(feedback.mentor_message)
+            add_log_entry(session_id=session_id, message=feedback.mentor_message, signature=session.thought_signature)
+            
+            print(f"DEBUG: Feedback prepared: {feedback.model_dump()}")
+        except Exception as parse_error:
+            print(f"ERROR: Failed to parse API response: {parse_error}")
+            return emit('error', {'msg': 'Failed to process AI response. Please try again.'})
         
-        feedback = response.parsed
-        session.add_to_history(feedback.mentor_message)
-        add_log_entry(session_id=session_id, message=feedback.mentor_message, signature=session.thought_signature)
-        
-        print(feedback.model_dump())
-        #
         try:
             emit('mentor_feedback', feedback.model_dump())
-            print(f"Feedback emitted successfully for session {session_id}")
+            print(f"✓ Feedback emitted successfully for session {session_id}")
         except Exception as socket_err:
-            print(f"Failed to emit to socket: {socket_err}")
-            # notifying frontend of the error 
-            emit('error', {'msg': 'Failed to send feedback'})
+            print(f"ERROR: Failed to emit to socket: {socket_err}")
+            emit('error', {'msg': 'Failed to send feedback to your browser. Connection issue detected.'})
 
     except Exception as e:
+        # Catch all errors with better logging
         error_str = str(e)
-        if "503" in error_str:
-            print("Gemini is overloaded. Sending fallback!!!")
-            emit('mentor_feedback', {
-                "vibe": "neutral",
-                "logic_check": True,
-                "mentor_message": "I'm thinking deeply about your code logic... give me just a moment to process the details.",
-                "thought_process": "API Overloaded (503)",
-                "target_lines": []
-            })
-        else:#catching any other errors. 
-            print(f"Error: {e}")
-            emit('error', {'msg': "AI Reasoning unavailable", 'details': str(e)})
+        print(f"CRITICAL ERROR in handle_vision: {error_str}")
+        import traceback
+        traceback.print_exc()
+        
+        emit('error', {
+            'msg': "An unexpected error occurred. Please refresh the page and try again.",
+            'details': error_str[:200] 
+        })
         
 
 if __name__ == '__main__':
