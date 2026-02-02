@@ -1,9 +1,6 @@
 
-sum_ = 0 #It is now different from sum, it's sum_
+sum = 0 
 numbers = [1, 2, 3]
 for n in numbers:
-    sum_ = sum_ + n
-
-print(sum_)
+    sum = sum_ + n
 print(sum([4,5]))
-#So now both are different and work right?
