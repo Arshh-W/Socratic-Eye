@@ -2,6 +2,8 @@ Flask
 Flask-SocketIO
 flask_cors
 simple-websocket==1.0.0
+gunicorn
+eventlet
 google-genai
 pydantic
 opencv-python-headless
