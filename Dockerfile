@@ -1,9 +1,11 @@
 # Building the frontend 
-FROM node:18-alpine AS frontend-builder
+FROM node:20-alpine AS frontend-builder
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm install
 COPY frontend/ .
+
+# 4. Run the build
 RUN npm run build
 
 # Production image
