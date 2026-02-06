@@ -1,7 +1,3 @@
-/* ================================
-    GLOBAL RESET & BASE
-================================ */
-
 *,
 *::before,
 *::after {
@@ -16,14 +12,18 @@ body {
   height: 100%;
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
-  background: #050508; /* Slightly deeper for 2026 HUD feel */
+  background: #050508; 
   color: #ffffff;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+body.no-scroll {
   overflow: hidden;
 }
 
-/* ================================
-    CSS VARIABLES (THEME SYSTEM)
-================================ */
 
 body {
   --accent: #4cc9f0;          
@@ -39,9 +39,7 @@ body.hype-man {
   --accent-soft: rgba(255, 183, 0, 0.3);
 }
 
-/* ================================
-    SCROLLBAR (SUBTLE)
-================================ */
+
 
 ::-webkit-scrollbar {
   width: 4px;
@@ -52,9 +50,6 @@ body.hype-man {
   border-radius: 10px;
 }
 
-/* ================================
-    UTILITY CLASSES
-================================ */
 
 .glass {
   background: var(--glass-bg);
@@ -79,9 +74,6 @@ body.hype-man {
   }
 }
 
-/* ================================
-    MENTOR MESSAGE (BASE OVERRIDES)
-================================ */
 
 .mentor-message {
   border-left: 3px solid var(--accent);
@@ -95,9 +87,7 @@ body.hype-man {
   background: linear-gradient(90deg, rgba(255, 77, 77, 0.1) 0%, transparent 100%);
 }
 
-/* ================================
-    SOCIATIC ORB ACCENT
-================================ */
+
 
 .socratic-orb.thinking {
   filter: drop-shadow(0 0 15px var(--accent-soft));
@@ -113,9 +103,7 @@ body.hype-man {
   filter: drop-shadow(0 0 25px var(--accent));
 }
 
-/* ================================
-    CODE OVERLAY ENHANCEMENTS
-================================ */
+
 
 .code-highlight {
   background: rgba(76, 201, 240, 0.15);
@@ -123,18 +111,13 @@ body.hype-man {
   box-shadow: 0 0 10px rgba(76, 201, 240, 0.2);
 }
 
-/* ================================
-    FOCUS NUDGE GLOW
-================================ */
 
 .nudge-glow {
   border: 1px solid var(--accent);
   box-shadow: 0 0 15px var(--accent-soft);
 }
 
-/* ================================
-    SETTINGS PANEL CONTROLS
-================================ */
+
 
 .settings-panel button {
   background: var(--accent);
@@ -150,16 +133,14 @@ body.hype-man {
   transform: translateY(-1px);
 }
 
-/* ============================= */
-/* AUTH PAGES (Login / Signup)   */
-/* ============================= */
+
 
 .auth-container {
   min-height: 100vh;
   width: 100vw;
   background: radial-gradient(circle at 50% 0%, var(--accent-soft) 0%, transparent 50%), #050508;
   
-  /* This centers the auth-card on the screen */
+
   display: flex;
   justify-content: center; 
   align-items: center;
@@ -168,12 +149,12 @@ body.hype-man {
 
 .auth-card {
   width: 100%;
-  max-width: 380px; /* This keeps it from looking like a sidebar */
+  max-width: 380px;
   padding: 40px;
   display: flex;
   flex-direction: column;
-  align-items: center; /* Centers the text/inputs inside the card */
-  /* Using your existing .glass styles implicitly or explicitly */
+  align-items: center; 
+
 }
 
 .auth-card h1 {
@@ -192,7 +173,7 @@ body.hype-man {
 }
 
 .auth-container input {
-  width: 100%; /* Now stays inside the 380px card */
+  width: 100%;
   padding: 14px 16px;
   margin-bottom: 15px;
   background: rgba(255, 255, 255, 0.05);

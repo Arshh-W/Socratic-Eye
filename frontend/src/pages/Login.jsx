@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { loginUser } from "../api/authApi";
 import { useSession } from "../context/SessionContext";
@@ -8,6 +8,11 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
   const { setUser } = useSession();
+
+  useEffect(() => {
+    document.body.classList.add("no-scroll");
+    return () => document.body.classList.remove("no-scroll");
+  }, []);
 
   const handleLogin = async () => {
   try {
