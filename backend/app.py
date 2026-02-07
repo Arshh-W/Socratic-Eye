@@ -234,12 +234,8 @@ def handle_vision(data):
         emit('processing_update', {'stage': 'interpreter', 'status': 'analyzing code'})
         
         # Interpreter Pass
-        try:
-            brief, session.thought_signature = get_interpreter_brief(client, processed_bytes, session.thought_signature)
-            print(f"DEBUG: Interpreter brief generated: {brief[:100]}...")
-        except Exception as interp_error:
-            print(f"ERROR: Interpreter failed: {interp_error}")
-            return emit('error', {'msg': 'Failed to analyze code. Please try again.'})
+        brief, session.thought_signature = get_interpreter_brief(client, processed_bytes, session.thought_signature)
+        print(f"DEBUG: Interpreter brief generated: {brief[:100]}...")
 
         emit('processing_update', {'stage': 'mentor', 'status': 'generating question'})
         

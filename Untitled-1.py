@@ -1,5 +1,3 @@
-#I'll write a function to calculate the factorial of a number 
-def calculate_factorial(n):
-    return n * calculate_factorial(n - 1)
-
-print(calculate_factorial(5))
+#printing numbers till 30!
+for i in rang(1,30)
+    print(i)
