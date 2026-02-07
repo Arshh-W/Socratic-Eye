@@ -201,7 +201,7 @@ def handle_vision(data):
             return emit('mentor_feedback', {
                 "vibe": "neutral",
                 "logic_check": True,
-                "mentor_message": f"Hold on! Let me process your previous code first. Try again in {remaining} seconds.",
+                "mentor_message": f"Hold on! Let me process your previous code first. Trying again in {remaining} seconds.",
                 "thought_process": "Throttled",
                 "target_lines": []
             })

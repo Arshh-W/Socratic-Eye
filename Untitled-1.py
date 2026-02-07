@@ -1,6 +1,5 @@
+#I'll write a function to calculate the factorial of a number 
+def calculate_factorial(n):
+    return n * calculate_factorial(n - 1)
 
-sum = 0 
-numbers = [1, 2, 3]
-for n in numbers:
-    sum = sum_ + n
-print(sum([4,5]))
+print(calculate_factorial(5))
